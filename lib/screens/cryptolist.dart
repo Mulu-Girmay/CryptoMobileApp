@@ -3,7 +3,9 @@ import '../model/coin.dart';
 import '../widgets/reusable_card.dart';
 
 class CryptoList extends StatelessWidget {
-  const CryptoList({super.key});
+  final int columns;
+
+  const CryptoList({super.key, this.columns = 2});
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +22,14 @@ class CryptoList extends StatelessWidget {
 
         final coins = snapshot.data!;
 
-        return ListView.builder(
+        return GridView.builder(
+          padding: const EdgeInsets.all(12),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 0.88,
+          ),
           itemCount: coins.length,
           itemBuilder: (context, index) {
             final coin = coins[index];
@@ -29,8 +38,33 @@ class CryptoList extends StatelessWidget {
               name: coin.name,
               image: coin.image,
               currentPrice: coin.price,
-              symbol: coin.symbol,
-              change: coin.change,
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: Text(coin.name),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        OnClickReusableCard(
+                          name: coin.name,
+                          image: coin.image,
+                          currentPrice: coin.price,
+                          symbol: coin.symbol,
+                          change: coin.change,
+                        ),
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Close'),
+                      ),
+                    ],
+                  ),
+                );
+              },
             );
           },
         );

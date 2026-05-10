@@ -24,8 +24,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
+    return Expanded(
+      child: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -35,11 +35,10 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         child: Center(
           child: Card(
-            elevation: 18,
-            color: Colors.white.withValues(alpha: 0.08),
+            elevation: 8,
+            color: const Color(0xFF0B1220),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
-              side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+              borderRadius: BorderRadius.circular(24),
             ),
             child: const Padding(
               padding: EdgeInsets.symmetric(horizontal: 28, vertical: 32),
@@ -103,7 +102,7 @@ class NextScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Next Screen'),
+        title: const Text('Coin Lists'),
         backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
       ),
