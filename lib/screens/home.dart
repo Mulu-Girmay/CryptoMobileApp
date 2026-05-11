@@ -26,76 +26,91 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: Column(
-          children: [
-            const Spacer(),
-
-            // 🔥 Logo + Title
-            Column(
-              children: const [
-                CircleAvatar(
-                  radius: 40,
-                  backgroundColor: Color(0xFF22C55E),
-                  child: Icon(
-                    Icons.currency_bitcoin,
-                    size: 40,
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(height: 16),
-                Text(
-                  'Crypto App',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 30,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Track prices & trends in real-time',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
-                ),
-              ],
-            ),
-
-            const Spacer(),
-
-            // 🔥 Bottom Panel (modern style)
-            Container(
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 30),
               decoration: const BoxDecoration(
-                color: Color(0xFF020617),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+                gradient: LinearGradient(
+                  colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
               ),
-              child: const Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Color(0xFF22C55E),
-                    ),
+              child: SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Column(
+                    children: [
+                      const Spacer(),
+
+                      Column(
+                        children: const [
+                          CircleAvatar(
+                            radius: 40,
+                            backgroundColor: Color(0xFF22C55E),
+                            child: Icon(
+                              Icons.currency_bitcoin,
+                              size: 40,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'Crypto App',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 30,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Track prices & trends in real-time',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const Spacer(),
+
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 30),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF020617),
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(30),
+                          ),
+                        ),
+                        child: const Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Color(0xFF22C55E),
+                              ),
+                            ),
+                            SizedBox(height: 12),
+                            Text(
+                              "Loading market data...",
+                              style: TextStyle(color: Colors.white70),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  SizedBox(height: 12),
-                  Text(
-                    "Loading market data...",
-                    style: TextStyle(color: Colors.white70),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );

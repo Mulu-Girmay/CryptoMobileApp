@@ -28,7 +28,7 @@ class CryptoList extends StatelessWidget {
             crossAxisCount: columns,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 0.88,
+            childAspectRatio: 0.82,
           ),
           itemCount: coins.length,
           itemBuilder: (context, index) {
@@ -41,28 +41,41 @@ class CryptoList extends StatelessWidget {
               onTap: () {
                 showDialog(
                   context: context,
-                  builder: (context) => AlertDialog(
-                    title: Text(coin.name),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        OnClickReusableCard(
-                          name: coin.name,
-                          image: coin.image,
-                          currentPrice: coin.price,
-                          symbol: coin.symbol,
-                          change: coin.change,
+                  builder: (context) {
+                    final media = MediaQuery.sizeOf(context);
+                    final maxDialogWidth = media.width - 48;
+
+                    return AlertDialog(
+                      insetPadding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 24,
+                      ),
+                      title: Text(
+                        coin.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      contentPadding: const EdgeInsets.all(12),
+                      content: SizedBox(
+                        width: maxDialogWidth,
+                        child: SingleChildScrollView(
+                          child: OnClickReusableCard(
+                            name: coin.name,
+                            image: coin.image,
+                            currentPrice: coin.price,
+                            symbol: coin.symbol,
+                            change: coin.change,
+                          ),
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Close'),
                         ),
                       ],
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Close'),
-                      ),
-                    ],
-                  ),
+                    );
+                  },
                 );
               },
             );

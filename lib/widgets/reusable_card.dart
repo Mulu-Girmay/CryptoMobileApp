@@ -22,65 +22,128 @@ class ReusableCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-        padding: const EdgeInsets.all(14),
+        margin: EdgeInsets.zero,
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: const Color(0xFF0B1220),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.white.withOpacity(0.05)),
         ),
-        child: Row(
-          children: [
-            // 🔥 Coin Image
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                image,
-                width: 44,
-                height: 44,
-                errorBuilder: (c, e, s) => const Icon(Icons.image, size: 44),
-              ),
-            ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 190;
 
-            const SizedBox(width: 12),
-
-            // 🔥 Name + symbol
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            if (compact) {
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+                  Center(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+
+                      child: Image.network(
+                        image,
+                        width: 50,
+                        height: 50,
+
+                        errorBuilder: (c, e, s) =>
+                            const Icon(Icons.image, size: 50),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   Text(
                     name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
-                      fontSize: 15,
+                      fontSize: 13,
                     ),
                   ),
                   const SizedBox(height: 4),
                   const Text(
                     "Crypto Asset",
-                    style: TextStyle(color: Colors.white54, fontSize: 12),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white54, fontSize: 11),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '\$${currentPrice.toStringAsFixed(2)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
                   ),
                 ],
-              ),
-            ),
+              );
+            }
 
-            // 🔥 Price + Change
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            return Row(
               children: [
-                Text(
-                  '\$${currentPrice.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    image,
+                    width: 36,
+                    height: 36,
+                    errorBuilder: (c, e, s) =>
+                        const Icon(Icons.image, size: 44),
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        "Crypto Asset",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white54, fontSize: 12),
+                      ),
+                      const SizedBox(height: 4),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          '\$${currentPrice.toStringAsFixed(2)}',
+                          maxLines: 1,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
@@ -113,7 +176,7 @@ class OnClickReusableCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(24),
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.all(16),
+        margin: EdgeInsets.zero,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: const Color(0xFF020617),
@@ -139,6 +202,9 @@ class OnClickReusableCard extends StatelessWidget {
             // 🔥 Name
             Text(
               name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
