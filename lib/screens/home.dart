@@ -1,7 +1,7 @@
 import 'dart:async';
-
-import 'package:crypto/screens/cryptolist.dart';
 import 'package:flutter/material.dart';
+import 'package:crypto/screens/cryptolist.dart';
+import 'package:crypto/widgets/menu.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,7 +14,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 10), () {
+
+    Timer(const Duration(seconds: 3), () {
       if (!mounted) return;
       Navigator.of(
         context,
@@ -24,70 +25,77 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF334155)],
+            colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
         ),
-        child: Center(
-          child: Card(
-            elevation: 8,
-            color: const Color(0xFF0B1220),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
+        child: Column(
+          children: [
+            const Spacer(),
+
+            // 🔥 Logo + Title
+            Column(
+              children: const [
+                CircleAvatar(
+                  radius: 40,
+                  backgroundColor: Color(0xFF22C55E),
+                  child: Icon(
+                    Icons.currency_bitcoin,
+                    size: 40,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Crypto App',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Track prices & trends in real-time',
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+              ],
             ),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 28, vertical: 32),
-              child: Column(
+
+            const Spacer(),
+
+            // 🔥 Bottom Panel (modern style)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 30),
+              decoration: const BoxDecoration(
+                color: Color(0xFF020617),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+              ),
+              child: const Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CircleAvatar(
-                    radius: 34,
-                    backgroundColor: Color(0xFF22C55E),
-                    child: Icon(
-                      Icons.currency_bitcoin,
-                      size: 36,
-                      color: Colors.white,
+                  CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Color(0xFF22C55E),
                     ),
                   ),
-                  SizedBox(height: 18),
+                  SizedBox(height: 12),
                   Text(
-                    'Crypto App',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    'Track prices, watch trends, and move fast.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                      height: 1.4,
-                    ),
-                  ),
-                  SizedBox(height: 22),
-                  SizedBox(
-                    width: 26,
-                    height: 26,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.6,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Color(0xFF22C55E),
-                      ),
-                    ),
+                    "Loading market data...",
+                    style: TextStyle(color: Colors.white70),
                   ),
                 ],
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -100,6 +108,7 @@ class NextScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const MenuWidget(),
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text('Coin Lists'),

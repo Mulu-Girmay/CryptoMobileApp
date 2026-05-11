@@ -4,6 +4,7 @@ class ReusableCard extends StatelessWidget {
   final String name;
   final String image;
   final double currentPrice;
+
   final VoidCallback? onTap;
 
   const ReusableCard({
@@ -11,55 +12,75 @@ class ReusableCard extends StatelessWidget {
     required this.name,
     required this.image,
     required this.currentPrice,
+
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
       onTap: onTap,
-      child: Card(
-        elevation: 8,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        color: Colors.black.withValues(alpha: 0.7),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // coin image
-              Center(
-                child: Image.network(
-                  image,
-                  width: 64,
-                  height: 64,
-                  errorBuilder: (c, e, s) => const Icon(Icons.image, size: 64),
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0B1220),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withOpacity(0.05)),
+        ),
+        child: Row(
+          children: [
+            // 🔥 Coin Image
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                image,
+                width: 44,
+                height: 44,
+                errorBuilder: (c, e, s) => const Icon(Icons.image, size: 44),
+              ),
+            ),
+
+            const SizedBox(width: 12),
+
+            // 🔥 Name + symbol
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    "Crypto Asset",
+                    style: TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+
+            // 🔥 Price + Change
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '\$${currentPrice.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-
-              const SizedBox(height: 10),
-
-              // name
-              Text(
-                name,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-
-              const SizedBox(height: 6),
-
-              // price
-              Text(
-                '\$${currentPrice.toStringAsFixed(2)}',
-                style: const TextStyle(fontSize: 13, color: Colors.white70),
-              ),
-            ],
-          ),
+                const SizedBox(height: 4),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -71,7 +92,7 @@ class OnClickReusableCard extends StatelessWidget {
   final String image;
   final double currentPrice;
   final String symbol;
-  final double change; // add change %
+  final double change;
   final VoidCallback? onTap;
 
   const OnClickReusableCard({
@@ -88,79 +109,112 @@ class OnClickReusableCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isPositive = change >= 0;
 
-    return GestureDetector(
+    return InkWell(
+      borderRadius: BorderRadius.circular(24),
       onTap: onTap,
-      child: Card(
-        elevation: 10,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        color: Colors.black.withValues(alpha: 0.78),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Center(
-                child: Image.network(
-                  image,
-                  width: 84,
-                  height: 84,
-                  errorBuilder: (c, e, s) => const Icon(Icons.image, size: 84),
+      child: Container(
+        margin: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF020617),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white.withOpacity(0.05)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 🔥 Coin Image
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.network(
+                image,
+                width: 90,
+                height: 90,
+                errorBuilder: (c, e, s) => const Icon(Icons.image, size: 90),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // 🔥 Name
+            Text(
+              name,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+
+            const SizedBox(height: 6),
+
+            // 🔥 Symbol
+            Text(
+              symbol.toUpperCase(),
+              style: const TextStyle(
+                color: Colors.white54,
+                fontSize: 14,
+                letterSpacing: 1,
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // 🔥 Price
+            Text(
+              '\$${currentPrice.toStringAsFixed(2)}',
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // 🔥 Change badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: isPositive
+                    ? Colors.green.withOpacity(0.15)
+                    : Colors.red.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '${isPositive ? '+' : ''}${change.toStringAsFixed(2)}%',
+                style: TextStyle(
+                  color: isPositive ? Colors.green : Colors.red,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
                 ),
               ),
+            ),
 
-              const SizedBox(height: 12),
+            const SizedBox(height: 20),
 
-              Text(
-                name,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
+            // 🔥 Action Button (optional but PRO)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF22C55E),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                onPressed: () {},
+                child: const Text(
+                  "View Details",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
                 ),
               ),
-
-              const SizedBox(height: 6),
-
-              Text(
-                symbol.toUpperCase(),
-                style: TextStyle(color: Colors.grey[400], fontSize: 13),
-              ),
-
-              const SizedBox(height: 10),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '\$${currentPrice.toStringAsFixed(2)}',
-                    style: const TextStyle(fontSize: 16, color: Colors.white),
-                  ),
-                  const SizedBox(width: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isPositive
-                          ? Colors.green.withOpacity(0.12)
-                          : Colors.red.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '${isPositive ? '+' : ''}${change.toStringAsFixed(2)}%',
-                      style: TextStyle(
-                        color: isPositive ? Colors.green : Colors.red,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
