@@ -4,8 +4,9 @@ import '../widgets/reusable_card.dart';
 
 class CryptoList extends StatelessWidget {
   final int columns;
+  final String searchQuery;
 
-  const CryptoList({super.key, this.columns = 2});
+  const CryptoList({super.key, this.columns = 2, this.searchQuery = ''});
 
   @override
   Widget build(BuildContext context) {
@@ -21,6 +22,21 @@ class CryptoList extends StatelessWidget {
         }
 
         final coins = snapshot.data!;
+        final query = searchQuery.trim().toLowerCase();
+        final filteredCoins = query.isEmpty
+            ? coins
+            : coins
+                  .where((coin) => coin.name.toLowerCase().contains(query))
+                  .toList();
+
+        if (filteredCoins.isEmpty) {
+          return const Center(
+            child: Text(
+              'No coins found',
+              style: TextStyle(color: Colors.white70),
+            ),
+          );
+        }
 
         return GridView.builder(
           padding: const EdgeInsets.all(12),
@@ -30,9 +46,9 @@ class CryptoList extends StatelessWidget {
             mainAxisSpacing: 12,
             childAspectRatio: 0.82,
           ),
-          itemCount: coins.length,
+          itemCount: filteredCoins.length,
           itemBuilder: (context, index) {
-            final coin = coins[index];
+            final coin = filteredCoins[index];
 
             return ReusableCard(
               name: coin.name,

@@ -64,15 +64,8 @@ class ReusableCard extends StatelessWidget {
                       fontSize: 13,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    "Crypto Asset",
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white54, fontSize: 11),
-                  ),
-                  const SizedBox(height: 6),
+
+                  const SizedBox(height: 8),
                   Text(
                     '\$${currentPrice.toStringAsFixed(2)}',
                     maxLines: 1,
@@ -117,15 +110,8 @@ class ReusableCard extends StatelessWidget {
                           fontSize: 13,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        "Crypto Asset",
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white54, fontSize: 12),
-                      ),
-                      const SizedBox(height: 4),
+
+                      const SizedBox(height: 8),
                       FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text(
