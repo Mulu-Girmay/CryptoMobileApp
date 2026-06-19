@@ -1,4 +1,5 @@
 import 'package:crypto/screens/Converter.dart';
+import 'package:crypto/screens/portfolio_screen.dart';
 import 'package:flutter/material.dart';
 
 class MenuWidget extends StatelessWidget {
@@ -62,28 +63,6 @@ class MenuWidget extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class PortfolioScreen extends StatelessWidget {
-  const PortfolioScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF020617),
-      appBar: AppBar(
-        title: const Text('Portfolio'),
-        backgroundColor: const Color(0xFF0F172A),
-        foregroundColor: Colors.white,
-      ),
-      body: const Center(
-        child: Text(
-          'Portfolio screen coming soon',
-          style: TextStyle(color: Colors.white),
         ),
       ),
     );
