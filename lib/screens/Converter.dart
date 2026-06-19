@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../model/coin.dart';
 import '../Logic/calc.dart';
+import '../utils/formatter.dart';
 
 class ConverterScreen extends StatefulWidget {
   const ConverterScreen({super.key});
@@ -16,18 +17,28 @@ class _ConverterScreenState extends State<ConverterScreen> {
   String? toCoin;
   final TextEditingController _amountController = TextEditingController();
   String _convertedAmount = '0';
+  bool _isConverting = false;
+  String _errorMessage = '';
 
   @override
   void initState() {
     super.initState();
     _coinsFuture = fetchCoins('usd');
-    _coinsFuture.then((coins) {
-      if (!mounted) return;
-      setState(() {
-        _coins = coins;
-      });
-      _performConversion();
-    });
+    _coinsFuture
+        .then((coins) {
+          if (!mounted) return;
+          setState(() {
+            _coins = coins;
+          });
+          _performConversion();
+        })
+        .catchError((error) {
+          if (!mounted) return;
+          setState(() {
+            _errorMessage =
+                'Failed to load coins. Please check your connection.';
+          });
+        });
     _amountController.addListener(_performConversion);
   }
 
@@ -37,11 +48,16 @@ class _ConverterScreenState extends State<ConverterScreen> {
     super.dispose();
   }
 
-  void _performConversion() {
+  void _performConversion() async {
     if (fromCoin == null || toCoin == null || _amountController.text.isEmpty) {
-      setState(() => _convertedAmount = '0');
+      setState(() {
+        _convertedAmount = '0';
+        _isConverting = false;
+      });
       return;
     }
+
+    setState(() => _isConverting = true);
 
     try {
       final amount = double.parse(_amountController.text);
@@ -49,12 +65,23 @@ class _ConverterScreenState extends State<ConverterScreen> {
           .firstWhere((coin) => coin.name == fromCoin)
           .price;
       final toPrice = _coins.firstWhere((coin) => coin.name == toCoin).price;
+
+      await Future.delayed(
+        const Duration(milliseconds: 300),
+      ); // Simulate loading
+
       final converted = Convert(amount, fromPrice, toPrice);
       setState(() {
-        _convertedAmount = converted.toStringAsFixed(2);
+        _convertedAmount = Formatter.formatPrice(converted);
+        _isConverting = false;
+        _errorMessage = '';
       });
     } catch (e) {
-      setState(() => _convertedAmount = '0');
+      setState(() {
+        _convertedAmount = 'Error';
+        _isConverting = false;
+        _errorMessage = 'Invalid input or coin data';
+      });
     }
   }
 
@@ -87,11 +114,36 @@ class _ConverterScreenState extends State<ConverterScreen> {
             );
           }
 
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(
-              child: Text(
-                'No coins available',
-                style: TextStyle(color: Colors.white),
+          if (snapshot.hasError ||
+              !snapshot.hasData ||
+              snapshot.data!.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red, size: 60),
+                  const SizedBox(height: 16),
+                  Text(
+                    _errorMessage.isNotEmpty
+                        ? _errorMessage
+                        : 'No coins available',
+                    style: const TextStyle(color: Colors.white70),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _coinsFuture = fetchCoins('usd');
+                        _errorMessage = '';
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF22C55E),
+                    ),
+                    child: const Text('Retry'),
+                  ),
+                ],
               ),
             );
           }
@@ -152,14 +204,37 @@ class _ConverterScreenState extends State<ConverterScreen> {
                           style: TextStyle(color: Colors.white54),
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          _convertedAmount,
-                          style: const TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF22C55E),
+                        if (_isConverting)
+                          const SizedBox(
+                            height: 26,
+                            width: 26,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Color(0xFF22C55E),
+                            ),
+                          )
+                        else
+                          Text(
+                            _convertedAmount,
+                            style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                              color: _convertedAmount == 'Error'
+                                  ? Colors.red
+                                  : const Color(0xFF22C55E),
+                            ),
                           ),
-                        ),
+                        if (_errorMessage.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              _errorMessage,
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),

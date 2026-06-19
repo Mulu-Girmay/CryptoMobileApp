@@ -1,23 +1,18 @@
 import 'package:flutter/material.dart';
+import '../model/coin.dart';
+import '../utils/formatter.dart';
 
 class ReusableCard extends StatelessWidget {
-  final String name;
-  final String image;
-  final double currentPrice;
-
+  final Coin coin;
   final VoidCallback? onTap;
 
-  const ReusableCard({
-    super.key,
-    required this.name,
-    required this.image,
-    required this.currentPrice,
-
-    this.onTap,
-  });
+  const ReusableCard({super.key, required this.coin, this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    final isPositive = coin.change >= 0;
+    final formattedPrice = Formatter.formatPrice(coin.price);
+
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: onTap,
@@ -41,20 +36,21 @@ class ReusableCard extends StatelessWidget {
                   Center(
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-
                       child: Image.network(
-                        image,
+                        coin.image,
                         width: 50,
                         height: 50,
-
-                        errorBuilder: (c, e, s) =>
-                            const Icon(Icons.image, size: 50),
+                        errorBuilder: (c, e, s) => const Icon(
+                          Icons.image,
+                          size: 50,
+                          color: Colors.grey,
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    name,
+                    coin.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
@@ -64,10 +60,43 @@ class ReusableCard extends StatelessWidget {
                       fontSize: 13,
                     ),
                   ),
-
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isPositive
+                          ? Colors.green.withOpacity(0.15)
+                          : Colors.red.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isPositive
+                              ? Icons.arrow_upward
+                              : Icons.arrow_downward,
+                          color: isPositive ? Colors.green : Colors.red,
+                          size: 12,
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          Formatter.formatChange(coin.change),
+                          style: TextStyle(
+                            color: isPositive ? Colors.green : Colors.red,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Text(
-                    '\$${currentPrice.toStringAsFixed(2)}',
+                    formattedPrice,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
@@ -86,36 +115,68 @@ class ReusableCard extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Image.network(
-                    image,
+                    coin.image,
                     width: 36,
                     height: 36,
                     errorBuilder: (c, e, s) =>
-                        const Icon(Icons.image, size: 44),
+                        const Icon(Icons.image, size: 44, color: Colors.grey),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        name,
+                        coin.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w600,
                           fontSize: 13,
                         ),
                       ),
-
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isPositive
+                              ? Colors.green.withOpacity(0.15)
+                              : Colors.red.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isPositive
+                                  ? Icons.arrow_upward
+                                  : Icons.arrow_downward,
+                              color: isPositive ? Colors.green : Colors.red,
+                              size: 12,
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              Formatter.formatChange(coin.change),
+                              style: TextStyle(
+                                color: isPositive ? Colors.green : Colors.red,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text(
-                          '\$${currentPrice.toStringAsFixed(2)}',
+                          formattedPrice,
                           maxLines: 1,
                           style: const TextStyle(
                             color: Colors.white,
@@ -137,26 +198,14 @@ class ReusableCard extends StatelessWidget {
 }
 
 class OnClickReusableCard extends StatelessWidget {
-  final String name;
-  final String image;
-  final double currentPrice;
-  final String symbol;
-  final double change;
+  final Coin coin;
   final VoidCallback? onTap;
 
-  const OnClickReusableCard({
-    super.key,
-    required this.name,
-    required this.image,
-    required this.currentPrice,
-    required this.symbol,
-    required this.change,
-    this.onTap,
-  });
+  const OnClickReusableCard({super.key, required this.coin, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final isPositive = change >= 0;
+    final isPositive = coin.change >= 0;
 
     return InkWell(
       borderRadius: BorderRadius.circular(24),
@@ -172,22 +221,19 @@ class OnClickReusableCard extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 🔥 Coin Image
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: Image.network(
-                image,
+                coin.image,
                 width: 90,
                 height: 90,
-                errorBuilder: (c, e, s) => const Icon(Icons.image, size: 90),
+                errorBuilder: (c, e, s) =>
+                    const Icon(Icons.image, size: 90, color: Colors.grey),
               ),
             ),
-
             const SizedBox(height: 16),
-
-            // 🔥 Name
             Text(
-              name,
+              coin.name,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
@@ -197,34 +243,25 @@ class OnClickReusableCard extends StatelessWidget {
                 color: Colors.white,
               ),
             ),
-
             const SizedBox(height: 6),
-
-            // 🔥 Symbol
             Text(
-              symbol.toUpperCase(),
+              coin.symbol.toUpperCase(),
               style: const TextStyle(
                 color: Colors.white54,
                 fontSize: 14,
                 letterSpacing: 1,
               ),
             ),
-
             const SizedBox(height: 20),
-
-            // 🔥 Price
             Text(
-              '\$${currentPrice.toStringAsFixed(2)}',
+              Formatter.formatPrice(coin.price),
               style: const TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.w700,
                 color: Colors.white,
               ),
             ),
-
             const SizedBox(height: 12),
-
-            // 🔥 Change badge
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
@@ -234,7 +271,7 @@ class OnClickReusableCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                '${isPositive ? '+' : ''}${change.toStringAsFixed(2)}%',
+                Formatter.formatChange(coin.change),
                 style: TextStyle(
                   color: isPositive ? Colors.green : Colors.red,
                   fontWeight: FontWeight.bold,
@@ -242,10 +279,21 @@ class OnClickReusableCard extends StatelessWidget {
                 ),
               ),
             ),
-
+            const SizedBox(height: 16),
+            _buildInfoRow(
+              'Market Cap',
+              Formatter.formatLargeNumber(coin.marketCap),
+            ),
+            const SizedBox(height: 8),
+            _buildInfoRow(
+              '24h Volume',
+              Formatter.formatLargeNumber(coin.totalVolume),
+            ),
+            const SizedBox(height: 8),
+            _buildInfoRow('24h High', Formatter.formatPrice(coin.high24h)),
+            const SizedBox(height: 8),
+            _buildInfoRow('24h Low', Formatter.formatPrice(coin.low24h)),
             const SizedBox(height: 20),
-
-            // 🔥 Action Button (optional but PRO)
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -269,6 +317,26 @@ class OnClickReusableCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white54, fontSize: 13),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }
