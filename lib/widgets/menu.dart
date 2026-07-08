@@ -1,3 +1,4 @@
+import 'package:crypto/screens/alert_screen.dart';
 import 'package:crypto/screens/Converter.dart';
 import 'package:crypto/screens/portfolio_screen.dart';
 import 'package:flutter/material.dart';
@@ -48,7 +49,7 @@ class MenuWidget extends StatelessWidget {
                   style: TextStyle(color: Colors.white),
                 ),
                 leading: const Icon(Icons.equalizer, color: Color(0xFF22C55E)),
-                onTap: () => _openScreen(context, ConverterScreen()),
+                onTap: () => _openScreen(context, const ConverterScreen()),
               ),
               ListTile(
                 title: const Text(
@@ -60,6 +61,17 @@ class MenuWidget extends StatelessWidget {
                   color: Color(0xFF22C55E),
                 ),
                 onTap: () => _openScreen(context, const PortfolioScreen()),
+              ),
+              ListTile(
+                title: const Text(
+                  'Alerts',
+                  style: TextStyle(color: Colors.white),
+                ),
+                leading: const Icon(
+                  Icons.notifications_active,
+                  color: Color(0xFF22C55E),
+                ),
+                onTap: () => _openScreen(context, const AlertScreen()),
               ),
             ],
           ),

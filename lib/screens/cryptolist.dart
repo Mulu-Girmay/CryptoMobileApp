@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import '../model/coin.dart';
 import '../widgets/reusable_card.dart';
-import 'package:flutter/material.dart';
-import '../model/coin.dart';
-import '../widgets/reusable_card.dart';
-import '../utils/formatter.dart';
 
 class CryptoList extends StatelessWidget {
   final int columns;
