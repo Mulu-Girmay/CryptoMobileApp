@@ -1,7 +1,9 @@
 import 'package:crypto/screens/alert_screen.dart';
 import 'package:crypto/screens/Converter.dart';
 import 'package:crypto/screens/cryptoScreen.dart';
+import 'package:crypto/screens/currency_screen.dart';
 import 'package:crypto/screens/portfolio_screen.dart';
+import 'package:crypto/services/currency_service.dart';
 import 'package:crypto/services/favorites_service.dart';
 import 'package:flutter/material.dart';
 
@@ -14,6 +16,7 @@ class MenuWidget extends StatefulWidget {
 
 class _MenuWidgetState extends State<MenuWidget> {
   final FavoritesService _favoritesService = FavoritesService();
+  final CurrencyService _currencyService = CurrencyService();
   int _favoritesCount = 0;
 
   @override
@@ -36,7 +39,6 @@ class _MenuWidgetState extends State<MenuWidget> {
 
   void _navigateToFavorites(BuildContext context) {
     Navigator.of(context).pop();
-    // Navigate to home with favorites filter
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => const CryptoScreen(),
@@ -99,7 +101,7 @@ class _MenuWidgetState extends State<MenuWidget> {
                             ),
                           ),
                           Text(
-                            'Track & manage your crypto',
+                            '${_currencyService.selectedCurrency.flag} ${_currencyService.selectedCurrency.code.toUpperCase()}',
                             style: TextStyle(
                               color: Colors.white54,
                               fontSize: 12,
@@ -158,21 +160,7 @@ class _MenuWidgetState extends State<MenuWidget> {
                       subtitle: 'Get notified on price changes',
                       onTap: () => _openScreen(context, const AlertScreen()),
                     ),
-                    _buildMenuItem(
-                      icon: Icons.show_chart,
-                      title: 'Charts',
-                      subtitle: 'View price trends',
-                      onTap: () {
-                        // Navigate to a chart screen with default coin (e.g., Bitcoin)
-                        // You could show a list of coins first
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Tap a coin to view its chart'),
-                            backgroundColor: Color(0xFF22C55E),
-                          ),
-                        );
-                      },
-                    ),
+
                     _buildMenuItem(
                       icon: Icons.star,
                       title: 'Favorites',
@@ -190,17 +178,20 @@ class _MenuWidgetState extends State<MenuWidget> {
                     _buildSectionHeader('Settings'),
 
                     _buildMenuItem(
-                      icon: Icons.settings,
-                      title: 'Settings',
-                      subtitle: 'App preferences',
-                      onTap: () {
-                        // TODO: Implement settings
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Settings coming soon!'),
-                            backgroundColor: Color(0xFF22C55E),
+                      icon: Icons.currency_exchange,
+                      title: 'Currency',
+                      subtitle:
+                          '${_currencyService.selectedCurrency.flag} ${_currencyService.selectedCurrency.code.toUpperCase()}',
+                      onTap: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const CurrencyScreen(),
                           ),
                         );
+                        if (result == true) {
+                          setState(() {}); // Refresh menu
+                        }
                       },
                     ),
 
@@ -209,7 +200,6 @@ class _MenuWidgetState extends State<MenuWidget> {
                       title: 'About',
                       subtitle: 'Version 1.0.0',
                       onTap: () {
-                        // TODO: Implement about dialog
                         _showAboutDialog(context);
                       },
                     ),
@@ -236,17 +226,7 @@ class _MenuWidgetState extends State<MenuWidget> {
                       children: [
                         IconButton(
                           onPressed: () {
-                            // TODO: Implement dark/light mode toggle
-                          },
-                          icon: const Icon(
-                            Icons.dark_mode,
-                            color: Colors.white38,
-                            size: 18,
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () {
-                            // TODO: Implement refresh
+                            // Refresh
                             _loadFavoritesCount();
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -394,7 +374,7 @@ class _MenuWidgetState extends State<MenuWidget> {
             ),
             SizedBox(height: 4),
             Text(
-              '• Live price tracking\n• Portfolio management\n• Price alerts\n• Favorites watchlist\n• Interactive charts\n• Currency converter',
+              '• Live price tracking\n• Portfolio management\n• Price alerts\n• Favorites watchlist\n• Interactive charts\n• Currency converter\n• Multi-currency support',
               style: TextStyle(color: Colors.white54, fontSize: 13),
             ),
           ],

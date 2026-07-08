@@ -1,6 +1,7 @@
 import 'package:crypto/screens/cryptolist.dart';
 import 'package:flutter/material.dart';
 import '../model/coin.dart';
+import '../services/currency_service.dart';
 import '../utils/formatter.dart';
 
 class CryptoScreen extends StatefulWidget {
@@ -12,6 +13,7 @@ class CryptoScreen extends StatefulWidget {
 
 class _CryptoScreenState extends State<CryptoScreen> {
   final TextEditingController searchController = TextEditingController();
+  final CurrencyService _currencyService = CurrencyService();
   String searchQuery = '';
   double totalBalance = 0.0;
   bool isLoading = false;
@@ -32,7 +34,8 @@ class _CryptoScreenState extends State<CryptoScreen> {
   Future<void> _fetchTotalBalance() async {
     setState(() => isLoading = true);
     try {
-      final coins = await fetchCoins('usd');
+      final currency = _currencyService.currentCode;
+      final coins = await fetchCoins(currency);
       double total = 0;
       for (int i = 0; i < (coins.length > 10 ? 10 : coins.length); i++) {
         total += coins[i].price;
@@ -66,9 +69,33 @@ class _CryptoScreenState extends State<CryptoScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      "Total Balance",
-                      style: TextStyle(color: Colors.white54, fontSize: 14),
+                    Row(
+                      children: [
+                        const Text(
+                          "Total Balance",
+                          style: TextStyle(color: Colors.white54, fontSize: 14),
+                        ),
+                        const Spacer(),
+                        // Show current currency
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF22C55E).withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            _currencyService.currentCode.toUpperCase(),
+                            style: const TextStyle(
+                              color: Color(0xFF22C55E),
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     Row(

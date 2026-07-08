@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../model/coin.dart';
+import '../services/currency_service.dart';
 import '../services/favorites_service.dart';
 import '../widgets/reusable_card.dart';
+import '../utils/formatter.dart';
 
 class CryptoList extends StatefulWidget {
   final int columns;
@@ -21,9 +23,11 @@ class CryptoList extends StatefulWidget {
 
 class _CryptoListState extends State<CryptoList> {
   final FavoritesService _favoritesService = FavoritesService();
+  final CurrencyService _currencyService = CurrencyService();
   List<Coin> _coins = [];
   bool _isLoading = true;
   String _errorMessage = '';
+  String _currentCurrency = 'usd';
 
   @override
   void initState() {
@@ -48,8 +52,15 @@ class _CryptoListState extends State<CryptoList> {
     });
 
     try {
+      // Get current currency from service
+      _currentCurrency = _currencyService.currentCode;
+
+      // Load favorites
       await _favoritesService.loadFavorites();
-      final coins = await fetchCoins('usd');
+
+      // Fetch coins with selected currency
+      final coins = await fetchCoins(_currentCurrency);
+
       setState(() {
         _coins = coins;
         _isLoading = false;
@@ -60,6 +71,11 @@ class _CryptoListState extends State<CryptoList> {
         _isLoading = false;
       });
     }
+  }
+
+  // Refresh when currency changes
+  Future<void> _refreshCoins() async {
+    await _loadCoins();
   }
 
   Future<void> _toggleFavorite(Coin coin) async {
@@ -172,7 +188,7 @@ class _CryptoListState extends State<CryptoList> {
     }
 
     return RefreshIndicator(
-      onRefresh: _loadCoins,
+      onRefresh: _refreshCoins,
       color: const Color(0xFF22C55E),
       child: GridView.builder(
         padding: const EdgeInsets.all(12),

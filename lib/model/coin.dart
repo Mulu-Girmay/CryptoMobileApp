@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:crypto/utils/formatter.dart';
 import 'package:http/http.dart' as http;
 import '../services/favorites_storage.dart';
 
@@ -28,6 +29,9 @@ class Coin {
     required this.low24h,
     this.isFavorite = false,
   });
+  String getFormattedPrice() {
+    return Formatter.formatPrice(price);
+  }
 
   factory Coin.fromJson(Map<String, dynamic> json) {
     return Coin(
