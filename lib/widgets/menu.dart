@@ -11,6 +11,7 @@ import 'package:crypto/services/theme_notifier.dart';
 import 'package:flutter/material.dart';
 import '../screens/refresh_setting_screen.dart';
 import '../services/theme_service.dart';
+import '../screens/transaction_screen.dart';
 
 class MenuWidget extends StatefulWidget {
   const MenuWidget({super.key});
@@ -160,7 +161,13 @@ class _MenuWidgetState extends State<MenuWidget> {
                       badgeText:
                           '${_favoritesCount > 0 ? _favoritesCount : ''}',
                     ),
-
+                    _buildMenuItem(
+                      icon: Icons.receipt_long,
+                      title: 'Transactions',
+                      subtitle: 'View transaction history',
+                      onTap: () =>
+                          _openScreen(context, const TransactionScreen()),
+                    ),
                     _buildMenuItem(
                       icon: Icons.notifications_active,
                       title: 'Price Alerts',
