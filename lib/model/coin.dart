@@ -1,11 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:http/http.dart' as http;
+
 import '../services/connection_service.dart';
 import '../services/favorites_storage.dart';
 import '../utils/error_handler.dart';
 import '../utils/retry_helper.dart';
-import 'dart:async';
 
 class Coin {
   final String id;
@@ -128,17 +130,12 @@ Future<List<Coin>> _fetchCoins(String currency) async {
     List data = jsonDecode(response.body);
     final coins = data.map((e) => Coin.fromJson(e)).toList();
 
-    // Load favorites from storage (handle errors gracefully)
-    try {
-      final favorites = await FavoritesStorage.loadFavorites();
-      for (var coin in coins) {
-        if (favorites.contains(coin.id)) {
-          coin.isFavorite = true;
-        }
+    // Load favorites from storage
+    final favorites = await FavoritesStorage.loadFavorites();
+    for (var coin in coins) {
+      if (favorites.contains(coin.id)) {
+        coin.isFavorite = true;
       }
-    } catch (e) {
-      // If favorites loading fails, just continue without favorites
-      print('Error loading favorites: $e');
     }
 
     return coins;

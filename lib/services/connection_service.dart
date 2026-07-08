@@ -8,6 +8,7 @@ class ConnectionService {
 
   final Connectivity _connectivity = Connectivity();
   bool _isConnected = true;
+  bool _hasCheckedOnce = false;
 
   bool get isConnected => _isConnected;
 
@@ -20,27 +21,48 @@ class ConnectionService {
 
   Future<bool> checkConnection() async {
     try {
+      // Simple connectivity check
       final result = await _connectivity.checkConnectivity();
-      _isConnected = result != ConnectivityResult.none;
+      final hasConnectivity = result != ConnectivityResult.none;
 
-      // Double check with actual internet access
-      if (_isConnected) {
-        _isConnected = await _hasInternetAccess();
+      if (!hasConnectivity) {
+        _isConnected = false;
+        return false;
       }
 
-      return _isConnected;
+      // Try a simple DNS lookup
+      try {
+        final addresses = await InternetAddress.lookup(
+          'google.com',
+        ).timeout(const Duration(seconds: 3));
+
+        final hasInternet =
+            addresses.isNotEmpty && addresses[0].rawAddress.isNotEmpty;
+
+        _isConnected = hasInternet;
+        _hasCheckedOnce = true;
+        return hasInternet;
+      } catch (_) {
+        // If DNS fails, but we were previously connected, assume still connected
+        if (_hasCheckedOnce && _isConnected) {
+          return true;
+        }
+        _isConnected = false;
+        return false;
+      }
     } catch (e) {
       _isConnected = false;
       return false;
     }
   }
 
-  Future<bool> _hasInternetAccess() async {
+  // Ultra-simplified check for when you just need to know if there's connectivity
+  Future<bool> quickCheck() async {
     try {
-      final result = await InternetAddress.lookup('google.com');
-      return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
-    } catch (e) {
-      return false;
+      final result = await _connectivity.checkConnectivity();
+      return result != ConnectivityResult.none;
+    } catch (_) {
+      return _isConnected;
     }
   }
 
