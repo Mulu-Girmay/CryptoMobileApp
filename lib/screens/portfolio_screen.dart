@@ -1,8 +1,11 @@
-import 'package:crypto/model/portfolio.dart';
 import 'package:flutter/material.dart';
 import '../model/coin.dart';
+import '../model/portfolio.dart';
 import '../services/portfolio_storage.dart';
+import '../services/transaction_storage.dart';
+import '../services/portfolio_performance_service.dart';
 import '../utils/formatter.dart';
+import '../widgets/performance_chart.dart';
 
 class PortfolioScreen extends StatefulWidget {
   const PortfolioScreen({super.key});
@@ -17,6 +20,8 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
   bool _isLoading = true;
   double _totalValue = 0.0;
   double _totalProfit = 0.0;
+  List<PerformanceDataPoint> _performanceData = [];
+  bool _isLoadingPerformance = false;
 
   @override
   void initState() {
@@ -28,10 +33,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Load portfolio items
       final items = await PortfolioStorage.loadPortfolio();
-
-      // Load current coin prices
       final coins = await fetchCoins('usd');
 
       setState(() {
@@ -40,11 +42,38 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
         _isLoading = false;
         _calculateTotals();
       });
+
+      if (_portfolioItems.isNotEmpty && _coins.isNotEmpty) {
+        await _loadPerformanceData();
+      }
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
       _showError('Failed to load portfolio: $e');
+    }
+  }
+
+  Future<void> _loadPerformanceData() async {
+    if (_portfolioItems.isEmpty || _coins.isEmpty) return;
+
+    setState(() => _isLoadingPerformance = true);
+
+    try {
+      final service = PortfolioPerformanceService();
+      final transactions = await TransactionStorage.loadTransactions();
+      final performance = await service.calculatePerformance(
+        transactions: transactions,
+        coins: _coins,
+      );
+
+      setState(() {
+        _performanceData = performance;
+        _isLoadingPerformance = false;
+      });
+    } catch (e) {
+      print('Error loading performance: $e');
+      setState(() => _isLoadingPerformance = false);
     }
   }
 
@@ -69,12 +98,8 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
         ),
       );
 
-      final currentValue = coin.price * item.amount;
-      final purchaseValue = item.purchasePrice * item.amount;
-      final profit = currentValue - purchaseValue;
-
-      totalValue += currentValue;
-      totalProfit += profit;
+      totalValue += item.calculateCurrentValue(coin.price);
+      totalProfit += item.calculateProfit(coin.price);
     }
 
     setState(() {
@@ -100,7 +125,8 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                 coin.image,
                 width: 30,
                 height: 30,
-                errorBuilder: (c, e, s) => const Icon(Icons.image, size: 30),
+                errorBuilder: (c, e, s) =>
+                    const Icon(Icons.image, size: 30, color: Colors.grey),
               ),
             ),
             const SizedBox(width: 12),
@@ -178,6 +204,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
               });
               _savePortfolio();
               _calculateTotals();
+              _loadPerformanceData();
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF22C55E),
@@ -224,6 +251,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
       });
       _savePortfolio();
       _calculateTotals();
+      _loadPerformanceData();
     }
   }
 
@@ -235,6 +263,88 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
+  }
+
+  Future<void> _showAddCoinDialog() async {
+    if (_coins.isEmpty) {
+      await _loadPortfolio();
+      if (_coins.isEmpty) {
+        _showError('Failed to load coins. Please try again.');
+        return;
+      }
+    }
+
+    final selectedCoin = await showDialog<Coin>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF0B1220),
+        title: const Text('Select Coin', style: TextStyle(color: Colors.white)),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 400,
+          child: ListView.builder(
+            itemCount: _coins.length,
+            itemBuilder: (context, index) {
+              final coin = _coins[index];
+              return ListTile(
+                leading: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    coin.image,
+                    width: 30,
+                    height: 30,
+                    errorBuilder: (c, e, s) =>
+                        const Icon(Icons.image, size: 30, color: Colors.grey),
+                  ),
+                ),
+                title: Text(
+                  coin.name,
+                  style: const TextStyle(color: Colors.white),
+                ),
+                subtitle: Text(
+                  Formatter.formatPrice(coin.price),
+                  style: const TextStyle(color: Colors.white54),
+                ),
+                onTap: () => Navigator.pop(context, coin),
+                tileColor: Colors.transparent,
+                hoverColor: Colors.white.withOpacity(0.05),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, null),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white54),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (selectedCoin != null) {
+      final existing = _portfolioItems.firstWhere(
+        (item) => item.coinId == selectedCoin.id,
+        orElse: () => PortfolioItem(
+          coinId: '',
+          coinName: '',
+          coinSymbol: '',
+          coinImage: '',
+          amount: 0,
+          purchasePrice: 0,
+          purchaseDate: DateTime.now(),
+        ),
+      );
+
+      if (existing.coinId.isNotEmpty) {
+        _showError('${selectedCoin.name} is already in your portfolio');
+        return;
+      }
+
+      await _addToPortfolio(selectedCoin);
+    }
   }
 
   @override
@@ -257,91 +367,118 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
           ? const Center(
               child: CircularProgressIndicator(color: Color(0xFF22C55E)),
             )
-          : Column(
-              children: [
-                // Portfolio Summary
-                Container(
-                  margin: const EdgeInsets.all(16),
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0B1220),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withOpacity(0.05)),
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  // Portfolio Summary
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0B1220),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withOpacity(0.05)),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Total Value',
+                              style: TextStyle(
+                                color: Colors.white54,
+                                fontSize: 14,
+                              ),
+                            ),
+                            Text(
+                              Formatter.formatPrice(_totalValue),
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF22C55E),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Total P&L',
+                              style: TextStyle(
+                                color: Colors.white54,
+                                fontSize: 14,
+                              ),
+                            ),
+                            Text(
+                              Formatter.formatPrice(_totalProfit),
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: _totalProfit >= 0
+                                    ? Colors.green
+                                    : Colors.red,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Assets',
+                              style: TextStyle(
+                                color: Colors.white54,
+                                fontSize: 14,
+                              ),
+                            ),
+                            Text(
+                              '${_portfolioItems.length} coins',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Total Value',
-                            style: TextStyle(
-                              color: Colors.white54,
-                              fontSize: 14,
-                            ),
-                          ),
-                          Text(
-                            Formatter.formatPrice(_totalValue),
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF22C55E),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Total P&L',
-                            style: TextStyle(
-                              color: Colors.white54,
-                              fontSize: 14,
-                            ),
-                          ),
-                          Text(
-                            Formatter.formatPrice(_totalProfit),
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: _totalProfit >= 0
-                                  ? Colors.green
-                                  : Colors.red,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Assets',
-                            style: TextStyle(
-                              color: Colors.white54,
-                              fontSize: 14,
-                            ),
-                          ),
-                          Text(
-                            '${_portfolioItems.length} coins',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
 
-                // Add Coin Button
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: ElevatedButton.icon(
-                    onPressed: () => _showAddCoinDialog(),
+                  const SizedBox(height: 16),
+
+                  // Performance Chart
+                  if (_isLoadingPerformance)
+                    Container(
+                      height: 300,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0B1220),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          color: Color(0xFF22C55E),
+                        ),
+                      ),
+                    )
+                  else
+                    PerformanceChart(
+                      performanceData: _performanceData,
+                      totalInvested: _portfolioItems.fold<double>(
+                        0,
+                        (sum, item) => sum + (item.purchasePrice * item.amount),
+                      ),
+                      currentValue: _totalValue,
+                    ),
+
+                  const SizedBox(height: 16),
+
+                  // Add Coin Button
+                  ElevatedButton.icon(
+                    onPressed: _showAddCoinDialog,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF22C55E),
                       minimumSize: const Size(double.infinity, 50),
@@ -358,13 +495,11 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                       ),
                     ),
                   ),
-                ),
 
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                // Portfolio List
-                Expanded(
-                  child: _portfolioItems.isEmpty
+                  // Portfolio List
+                  _portfolioItems.isEmpty
                       ? const Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -388,7 +523,8 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                           ),
                         )
                       : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
                           itemCount: _portfolioItems.length,
                           itemBuilder: (context, index) {
                             final item = _portfolioItems[index];
@@ -408,13 +544,12 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                               ),
                             );
 
-                            final currentValue = coin.price * item.amount;
-                            final purchaseValue =
-                                item.purchasePrice * item.amount;
-                            final profit = currentValue - purchaseValue;
-                            final profitPercentage = purchaseValue != 0
-                                ? (profit / purchaseValue) * 100
-                                : 0.0;
+                            final currentValue = item.calculateCurrentValue(
+                              coin.price,
+                            );
+                            final profit = item.calculateProfit(coin.price);
+                            final profitPercentage = item
+                                .calculateProfitPercentage(coin.price);
 
                             return _buildPortfolioCard(
                               item: item,
@@ -426,8 +561,8 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                             );
                           },
                         ),
-                ),
-              ],
+                ],
+              ),
             ),
     );
   }
@@ -557,88 +692,5 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
         ],
       ),
     );
-  }
-
-  Future<void> _showAddCoinDialog() async {
-    if (_coins.isEmpty) {
-      await _loadPortfolio();
-      if (_coins.isEmpty) {
-        _showError('Failed to load coins. Please try again.');
-        return;
-      }
-    }
-
-    final selectedCoin = await showDialog<Coin>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF0B1220),
-        title: const Text('Select Coin', style: TextStyle(color: Colors.white)),
-        content: SizedBox(
-          width: double.maxFinite,
-          height: 400,
-          child: ListView.builder(
-            itemCount: _coins.length,
-            itemBuilder: (context, index) {
-              final coin = _coins[index];
-              return ListTile(
-                leading: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    coin.image,
-                    width: 30,
-                    height: 30,
-                    errorBuilder: (c, e, s) =>
-                        const Icon(Icons.image, size: 30),
-                  ),
-                ),
-                title: Text(
-                  coin.name,
-                  style: const TextStyle(color: Colors.white),
-                ),
-                subtitle: Text(
-                  Formatter.formatPrice(coin.price),
-                  style: const TextStyle(color: Colors.white54),
-                ),
-                onTap: () => Navigator.pop(context, coin),
-                tileColor: Colors.transparent,
-                hoverColor: Colors.white.withOpacity(0.05),
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, null),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Colors.white54),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (selectedCoin != null) {
-      // Check if coin already in portfolio
-      final existing = _portfolioItems.firstWhere(
-        (item) => item.coinId == selectedCoin.id,
-        orElse: () => PortfolioItem(
-          coinId: '',
-          coinName: '',
-          coinSymbol: '',
-          coinImage: '',
-          amount: 0,
-          purchasePrice: 0,
-          purchaseDate: DateTime.now(),
-        ),
-      );
-
-      if (existing.coinId.isNotEmpty) {
-        _showError('${selectedCoin.name} is already in your portfolio');
-        return;
-      }
-
-      await _addToPortfolio(selectedCoin);
-    }
   }
 }
