@@ -3,6 +3,7 @@ import '../model/coin.dart';
 import '../services/currency_service.dart';
 import '../services/favorites_service.dart';
 import '../services/refresh_service.dart';
+import '../utils/error_handler.dart';
 import '../widgets/reusable_card.dart';
 import '../utils/formatter.dart';
 
@@ -31,10 +32,11 @@ class _CryptoListState extends State<CryptoList>
   List<Coin> _coins = [];
   bool _isLoading = true;
   bool _isRefreshing = false;
-  String _errorMessage = '';
+  AppError? _error;
   String _currentCurrency = 'usd';
   DateTime _lastUpdated = DateTime.now();
   String _lastUpdatedText = 'Never';
+  int _retryCount = 0;
 
   @override
   bool get wantKeepAlive => true;
@@ -43,8 +45,6 @@ class _CryptoListState extends State<CryptoList>
   void initState() {
     super.initState();
     _loadCoins();
-
-    // Listen for auto-refresh
     _refreshService.addListener(_onAutoRefresh);
   }
 
@@ -63,24 +63,37 @@ class _CryptoListState extends State<CryptoList>
   Future<void> _loadCoins() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = '';
+      _error = null;
     });
 
     try {
       _currentCurrency = _currencyService.currentCode;
+
+      // Load favorites
       await _favoritesService.loadFavorites();
-      final coins = await fetchCoins(_currentCurrency);
+
+      // Fetch coins with error handling
+      final result = await fetchCoinsWithErrorHandling(_currentCurrency);
+
+      if (result.error != null) {
+        setState(() {
+          _error = result.error;
+          _isLoading = false;
+        });
+        return;
+      }
 
       setState(() {
-        _coins = coins;
+        _coins = result.coins;
         _isLoading = false;
         _isRefreshing = false;
         _lastUpdated = DateTime.now();
         _updateLastUpdatedText();
+        _retryCount = 0;
       });
     } catch (e) {
       setState(() {
-        _errorMessage = e.toString();
+        _error = AppError.fromException(e);
         _isLoading = false;
         _isRefreshing = false;
       });
@@ -92,23 +105,36 @@ class _CryptoListState extends State<CryptoList>
 
     setState(() {
       _isRefreshing = true;
-      _errorMessage = '';
+      _error = null;
     });
 
     try {
       _currentCurrency = _currencyService.currentCode;
+
+      // Load favorites
       await _favoritesService.loadFavorites();
-      final coins = await fetchCoins(_currentCurrency);
+
+      // Fetch coins with error handling
+      final result = await fetchCoinsWithErrorHandling(_currentCurrency);
+
+      if (result.error != null) {
+        setState(() {
+          _error = result.error;
+          _isRefreshing = false;
+        });
+        return;
+      }
 
       setState(() {
-        _coins = coins;
+        _coins = result.coins;
         _isRefreshing = false;
         _lastUpdated = DateTime.now();
         _updateLastUpdatedText();
+        _retryCount = 0;
       });
     } catch (e) {
       setState(() {
-        _errorMessage = e.toString();
+        _error = AppError.fromException(e);
         _isRefreshing = false;
       });
     }
@@ -146,6 +172,7 @@ class _CryptoListState extends State<CryptoList>
     final query = widget.searchQuery.trim().toLowerCase();
 
     var filtered = _coins.where((coin) {
+      // Search filter
       if (query.isNotEmpty) {
         final matchesSearch =
             coin.name.toLowerCase().contains(query) ||
@@ -153,6 +180,7 @@ class _CryptoListState extends State<CryptoList>
         if (!matchesSearch) return false;
       }
 
+      // Favorites filter
       if (widget.showOnlyFavorites) {
         return coin.isFavorite;
       }
@@ -160,6 +188,7 @@ class _CryptoListState extends State<CryptoList>
       return true;
     }).toList();
 
+    // Sort favorites to the top
     if (!widget.showOnlyFavorites) {
       filtered.sort((a, b) {
         if (a.isFavorite && !b.isFavorite) return -1;
@@ -175,6 +204,7 @@ class _CryptoListState extends State<CryptoList>
   Widget build(BuildContext context) {
     super.build(context);
 
+    // Show loading
     if (_isLoading) {
       return const Center(
         child: Column(
@@ -188,34 +218,27 @@ class _CryptoListState extends State<CryptoList>
       );
     }
 
-    if (_errorMessage.isNotEmpty && _coins.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, color: Colors.red, size: 50),
-            const SizedBox(height: 12),
-            Text(
-              'Error: $_errorMessage',
-              style: const TextStyle(color: Colors.white70),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: _loadCoins,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF22C55E),
-              ),
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
+    // Show error with retry
+    if (_error != null) {
+      return ErrorHandler.buildErrorWidget(
+        context,
+        _error!,
+        onRetry: () {
+          _retryCount++;
+          _loadCoins();
+        },
+        onDismiss: () {
+          setState(() {
+            _error = null;
+            _isLoading = false;
+          });
+        },
       );
     }
 
     final filteredCoins = _filteredCoins;
 
-    if (filteredCoins.isEmpty) {
+    if (filteredCoins.isEmpty && !_isLoading) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -278,6 +301,26 @@ class _CryptoListState extends State<CryptoList>
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
                       color: Color(0xFF22C55E),
+                    ),
+                  ),
+                ),
+              if (_retryCount > 0)
+                Container(
+                  margin: const EdgeInsets.only(left: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Retry $_retryCount',
+                    style: const TextStyle(
+                      color: Colors.orange,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),

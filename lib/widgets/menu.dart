@@ -3,11 +3,14 @@ import 'package:crypto/screens/Converter.dart';
 import 'package:crypto/screens/cryptoScreen.dart';
 import 'package:crypto/screens/currency_screen.dart';
 import 'package:crypto/screens/portfolio_screen.dart';
+import 'package:crypto/screens/theme_screen.dart';
 import 'package:crypto/services/currency_service.dart';
 import 'package:crypto/services/favorites_service.dart';
 import 'package:crypto/services/refresh_service.dart';
+import 'package:crypto/services/theme_notifier.dart';
 import 'package:flutter/material.dart';
 import '../screens/refresh_setting_screen.dart';
+import '../services/theme_service.dart';
 
 class MenuWidget extends StatefulWidget {
   const MenuWidget({super.key});
@@ -20,6 +23,7 @@ class _MenuWidgetState extends State<MenuWidget> {
   final FavoritesService _favoritesService = FavoritesService();
   final CurrencyService _currencyService = CurrencyService();
   final RefreshService _refreshService = RefreshService();
+  final ThemeNotifier _themeNotifier = ThemeNotifier();
   int _favoritesCount = 0;
 
   @override
@@ -54,10 +58,10 @@ class _MenuWidgetState extends State<MenuWidget> {
   Widget build(BuildContext context) {
     return Drawer(
       width: MediaQuery.sizeOf(context).width * 0.6,
-      backgroundColor: const Color(0xFF020617),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       child: SafeArea(
         child: Container(
-          color: const Color(0xFF0B1220),
+          color: Theme.of(context).cardTheme.color,
           child: Column(
             children: [
               // Header with profile
@@ -66,14 +70,18 @@ class _MenuWidgetState extends State<MenuWidget> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      const Color(0xFF22C55E).withOpacity(0.1),
+                      AppTheme.primaryGreen.withOpacity(0.1),
                       Colors.transparent,
                     ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
                   border: Border(
-                    bottom: BorderSide(color: Colors.white.withOpacity(0.05)),
+                    bottom: BorderSide(
+                      color:
+                          Theme.of(context).dividerTheme.color ??
+                          Colors.transparent,
+                    ),
                   ),
                 ),
                 child: Row(
@@ -81,12 +89,12 @@ class _MenuWidgetState extends State<MenuWidget> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF22C55E).withOpacity(0.2),
+                        color: AppTheme.primaryGreen.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
                         Icons.account_balance_wallet,
-                        color: Color(0xFF22C55E),
+                        color: AppTheme.primaryGreen,
                         size: 28,
                       ),
                     ),
@@ -98,17 +106,13 @@ class _MenuWidgetState extends State<MenuWidget> {
                           const Text(
                             'Crypto App',
                             style: TextStyle(
-                              color: Colors.white,
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           Text(
                             '${_currencyService.selectedCurrency.flag} ${_currencyService.selectedCurrency.code.toUpperCase()}',
-                            style: TextStyle(
-                              color: Colors.white54,
-                              fontSize: 12,
-                            ),
+                            style: TextStyle(color: Colors.grey, fontSize: 12),
                           ),
                         ],
                       ),
@@ -141,7 +145,7 @@ class _MenuWidgetState extends State<MenuWidget> {
                           _openScreen(context, const ConverterScreen()),
                     ),
 
-                    const Divider(color: Colors.white12, height: 32),
+                    const Divider(height: 32),
 
                     // Section: Portfolio
                     _buildSectionHeader('Portfolio'),
@@ -175,7 +179,7 @@ class _MenuWidgetState extends State<MenuWidget> {
                       badgeColor: Colors.amber,
                     ),
 
-                    const Divider(color: Colors.white12, height: 32),
+                    const Divider(height: 32),
 
                     // Section: Settings
                     _buildSectionHeader('Settings'),
@@ -193,7 +197,7 @@ class _MenuWidgetState extends State<MenuWidget> {
                           ),
                         );
                         if (result == true) {
-                          setState(() {}); // Refresh menu
+                          setState(() {});
                         }
                       },
                     ),
@@ -205,6 +209,13 @@ class _MenuWidgetState extends State<MenuWidget> {
                           '${_refreshService.isRunning ? 'Auto' : 'Manual'} refresh',
                       onTap: () =>
                           _openScreen(context, const RefreshSettingsScreen()),
+                    ),
+
+                    _buildMenuItem(
+                      icon: Icons.palette,
+                      title: 'Theme',
+                      subtitle: '${_themeNotifier.getThemeModeName()} mode',
+                      onTap: () => _openScreen(context, const ThemeScreen()),
                     ),
 
                     _buildMenuItem(
@@ -224,7 +235,11 @@ class _MenuWidgetState extends State<MenuWidget> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   border: Border(
-                    top: BorderSide(color: Colors.white.withOpacity(0.05)),
+                    top: BorderSide(
+                      color:
+                          Theme.of(context).dividerTheme.color ??
+                          Colors.transparent,
+                    ),
                   ),
                 ),
                 child: Row(
@@ -232,25 +247,24 @@ class _MenuWidgetState extends State<MenuWidget> {
                   children: [
                     Text(
                       'Crypto App v1.0.0',
-                      style: TextStyle(color: Colors.white38, fontSize: 10),
+                      style: TextStyle(color: Colors.grey, fontSize: 10),
                     ),
                     Row(
                       children: [
                         IconButton(
                           onPressed: () {
-                            // Refresh
                             _loadFavoritesCount();
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Refreshed!'),
-                                backgroundColor: Color(0xFF22C55E),
+                                backgroundColor: AppTheme.primaryGreen,
                                 duration: Duration(seconds: 1),
                               ),
                             );
                           },
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.refresh,
-                            color: Colors.white38,
+                            color: Colors.grey,
                             size: 18,
                           ),
                         ),
@@ -272,7 +286,7 @@ class _MenuWidgetState extends State<MenuWidget> {
       child: Text(
         title,
         style: TextStyle(
-          color: Colors.white54,
+          color: Colors.grey,
           fontSize: 11,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.5,
@@ -296,22 +310,22 @@ class _MenuWidgetState extends State<MenuWidget> {
       leading: Icon(
         icon,
         color: isActive
-            ? const Color(0xFF22C55E)
+            ? AppTheme.primaryGreen
             : isFavorite
             ? Colors.amber
-            : Colors.white54,
+            : Colors.grey,
         size: 22,
       ),
       title: Text(
         title,
         style: TextStyle(
-          color: isActive ? const Color(0xFF22C55E) : Colors.white,
+          color: isActive ? AppTheme.primaryGreen : null,
           fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
         ),
       ),
       subtitle: Text(
         subtitle,
-        style: const TextStyle(color: Colors.white38, fontSize: 11),
+        style: TextStyle(color: Colors.grey, fontSize: 11),
       ),
       trailing: showBadge && badgeText.isNotEmpty
           ? Container(
@@ -335,14 +349,14 @@ class _MenuWidgetState extends State<MenuWidget> {
               width: 6,
               height: 6,
               decoration: BoxDecoration(
-                color: const Color(0xFF22C55E),
+                color: AppTheme.primaryGreen,
                 borderRadius: BorderRadius.circular(3),
               ),
             )
           : null,
       onTap: onTap,
       tileColor: isActive
-          ? const Color(0xFF22C55E).withOpacity(0.05)
+          ? AppTheme.primaryGreen.withOpacity(0.05)
           : Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     );
@@ -352,42 +366,33 @@ class _MenuWidgetState extends State<MenuWidget> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF0B1220),
-        title: const Text(
-          'About Crypto App',
-          style: TextStyle(color: Colors.white),
-        ),
+        backgroundColor: Theme.of(context).dialogTheme.backgroundColor,
+        title: const Text('About Crypto App', style: TextStyle()),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: const [
-            Icon(Icons.currency_bitcoin, size: 50, color: Color(0xFF22C55E)),
+            Icon(
+              Icons.currency_bitcoin,
+              size: 50,
+              color: AppTheme.primaryGreen,
+            ),
             SizedBox(height: 16),
             Text(
               'Crypto App v1.0.0',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 8),
             Text(
               'A comprehensive cryptocurrency tracking app built with Flutter.',
-              style: TextStyle(color: Colors.white54),
+              style: TextStyle(color: Colors.grey),
             ),
             SizedBox(height: 8),
-            Text(
-              'Features:',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            Text('Features:', style: TextStyle(fontWeight: FontWeight.bold)),
             SizedBox(height: 4),
             Text(
-              '• Live price tracking\n• Portfolio management\n• Price alerts\n• Favorites watchlist\n• Interactive charts\n• Currency converter\n• Multi-currency support\n• Auto-refresh',
-              style: TextStyle(color: Colors.white54, fontSize: 13),
+              '• Live price tracking\n• Portfolio management\n• Price alerts\n• Favorites watchlist\n• Interactive charts\n• Currency converter\n• Multi-currency support\n• Auto-refresh\n• Dark/Light theme',
+              style: TextStyle(color: Colors.grey, fontSize: 13),
             ),
           ],
         ),
@@ -396,7 +401,7 @@ class _MenuWidgetState extends State<MenuWidget> {
             onPressed: () => Navigator.pop(context),
             child: const Text(
               'Close',
-              style: TextStyle(color: Color(0xFF22C55E)),
+              style: TextStyle(color: AppTheme.primaryGreen),
             ),
           ),
         ],
