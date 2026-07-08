@@ -73,6 +73,24 @@ class MenuWidget extends StatelessWidget {
                 ),
                 onTap: () => _openScreen(context, const AlertScreen()),
               ),
+              const Divider(color: Colors.white12),
+              ListTile(
+                leading: const Icon(Icons.star, color: Colors.amber),
+                title: const Text(
+                  'Favorites',
+                  style: TextStyle(color: Colors.white),
+                ),
+                subtitle: const Text(
+                  'View your favorite coins',
+                  style: TextStyle(color: Colors.white38, fontSize: 12),
+                ),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  // Navigate to home with favorites filter
+                  // You can implement this using a state management solution
+                  // or by passing a parameter to the home screen
+                },
+              ),
             ],
           ),
         ),

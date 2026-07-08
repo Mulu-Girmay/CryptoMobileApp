@@ -15,6 +15,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
   String searchQuery = '';
   double totalBalance = 0.0;
   bool isLoading = false;
+  bool showOnlyFavorites = false;
 
   @override
   void initState() {
@@ -32,8 +33,6 @@ class _CryptoScreenState extends State<CryptoScreen> {
     setState(() => isLoading = true);
     try {
       final coins = await fetchCoins('usd');
-      // Calculate total balance (you can customize this logic)
-      // For now, it's the sum of top 10 coin prices
       double total = 0;
       for (int i = 0; i < (coins.length > 10 ? 10 : coins.length); i++) {
         total += coins[i].price;
@@ -109,47 +108,134 @@ class _CryptoScreenState extends State<CryptoScreen> {
 
               const SizedBox(height: 20),
 
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0B1220),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.white.withOpacity(0.05)),
-                ),
-                child: TextField(
-                  controller: searchController,
-                  style: const TextStyle(color: Colors.white),
-                  onChanged: (value) {
-                    setState(() {
-                      searchQuery = value;
-                    });
-                  },
-                  decoration: InputDecoration(
-                    hintText: "Search coins...",
-                    hintStyle: const TextStyle(color: Colors.white38),
-                    prefixIcon: const Icon(Icons.search, color: Colors.white54),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                    suffixIcon: searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(
-                              Icons.clear,
-                              color: Colors.white54,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                searchController.clear();
-                                searchQuery = '';
-                              });
-                            },
-                          )
-                        : null,
+              // Search and Filter Row
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0B1220),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.05),
+                        ),
+                      ),
+                      child: TextField(
+                        controller: searchController,
+                        style: const TextStyle(color: Colors.white),
+                        onChanged: (value) {
+                          setState(() {
+                            searchQuery = value;
+                          });
+                        },
+                        decoration: InputDecoration(
+                          hintText: "Search coins...",
+                          hintStyle: const TextStyle(color: Colors.white38),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: Colors.white54,
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 14,
+                          ),
+                          suffixIcon: searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(
+                                    Icons.clear,
+                                    color: Colors.white54,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      searchController.clear();
+                                      searchQuery = '';
+                                    });
+                                  },
+                                )
+                              : null,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  // Favorites filter toggle
+                  Container(
+                    decoration: BoxDecoration(
+                      color: showOnlyFavorites
+                          ? const Color(0xFF22C55E).withOpacity(0.15)
+                          : const Color(0xFF0B1220),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: showOnlyFavorites
+                            ? const Color(0xFF22C55E)
+                            : Colors.white.withOpacity(0.05),
+                      ),
+                    ),
+                    child: IconButton(
+                      onPressed: () {
+                        setState(() {
+                          showOnlyFavorites = !showOnlyFavorites;
+                        });
+                      },
+                      icon: Icon(
+                        showOnlyFavorites ? Icons.star : Icons.star_border,
+                        color: showOnlyFavorites
+                            ? Colors.amber
+                            : Colors.white54,
+                        size: 24,
+                      ),
+                      tooltip: showOnlyFavorites
+                          ? 'Show all coins'
+                          : 'Show favorites only',
+                    ),
+                  ),
+                ],
               ),
 
               const SizedBox(height: 20),
 
-              Expanded(child: CryptoList(searchQuery: searchQuery)),
+              // Counter for favorites
+              if (showOnlyFavorites)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.star, color: Colors.amber, size: 16),
+                      const SizedBox(width: 4),
+                      const Text(
+                        'Showing favorites only',
+                        style: TextStyle(color: Colors.white54, fontSize: 12),
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            showOnlyFavorites = false;
+                          });
+                        },
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(0, 0),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text(
+                          'Clear filter',
+                          style: TextStyle(
+                            color: Color(0xFF22C55E),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              Expanded(
+                child: CryptoList(
+                  searchQuery: searchQuery,
+                  showOnlyFavorites: showOnlyFavorites,
+                ),
+              ),
             ],
           ),
         ),

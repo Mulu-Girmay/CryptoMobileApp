@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../services/favorites_storage.dart';
 
 class Coin {
   final String id;
@@ -12,6 +13,7 @@ class Coin {
   final double totalVolume;
   final double high24h;
   final double low24h;
+  bool isFavorite; // Made mutable
 
   Coin({
     required this.id,
@@ -24,6 +26,7 @@ class Coin {
     required this.totalVolume,
     required this.high24h,
     required this.low24h,
+    this.isFavorite = false,
   });
 
   factory Coin.fromJson(Map<String, dynamic> json) {
@@ -40,6 +43,23 @@ class Coin {
       low24h: (json['low_24h'] as num?)?.toDouble() ?? 0.0,
     );
   }
+
+  // Create a copy with updated favorite status
+  Coin copyWithFavorite(bool favorite) {
+    return Coin(
+      id: id,
+      name: name,
+      symbol: symbol,
+      image: image,
+      price: price,
+      change: change,
+      marketCap: marketCap,
+      totalVolume: totalVolume,
+      high24h: high24h,
+      low24h: low24h,
+      isFavorite: favorite,
+    );
+  }
 }
 
 Future<List<Coin>> fetchCoins(String currency) async {
@@ -52,7 +72,19 @@ Future<List<Coin>> fetchCoins(String currency) async {
 
     if (response.statusCode == 200) {
       List data = jsonDecode(response.body);
-      return data.map((e) => Coin.fromJson(e)).toList();
+      final coins = data.map((e) => Coin.fromJson(e)).toList();
+
+      // Load favorites from storage
+      final favorites = await FavoritesStorage.loadFavorites();
+
+      // Mark favorites
+      for (var coin in coins) {
+        if (favorites.contains(coin.id)) {
+          coin.isFavorite = true;
+        }
+      }
+
+      return coins;
     } else {
       throw Exception('Failed to load coins: ${response.statusCode}');
     }
