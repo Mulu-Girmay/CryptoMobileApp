@@ -5,7 +5,9 @@ import 'package:crypto/screens/currency_screen.dart';
 import 'package:crypto/screens/portfolio_screen.dart';
 import 'package:crypto/services/currency_service.dart';
 import 'package:crypto/services/favorites_service.dart';
+import 'package:crypto/services/refresh_service.dart';
 import 'package:flutter/material.dart';
+import '../screens/refresh_setting_screen.dart';
 
 class MenuWidget extends StatefulWidget {
   const MenuWidget({super.key});
@@ -17,6 +19,7 @@ class MenuWidget extends StatefulWidget {
 class _MenuWidgetState extends State<MenuWidget> {
   final FavoritesService _favoritesService = FavoritesService();
   final CurrencyService _currencyService = CurrencyService();
+  final RefreshService _refreshService = RefreshService();
   int _favoritesCount = 0;
 
   @override
@@ -193,6 +196,15 @@ class _MenuWidgetState extends State<MenuWidget> {
                           setState(() {}); // Refresh menu
                         }
                       },
+                    ),
+
+                    _buildMenuItem(
+                      icon: Icons.timer,
+                      title: 'Refresh',
+                      subtitle:
+                          '${_refreshService.isRunning ? 'Auto' : 'Manual'} refresh',
+                      onTap: () =>
+                          _openScreen(context, const RefreshSettingsScreen()),
                     ),
 
                     _buildMenuItem(
@@ -374,7 +386,7 @@ class _MenuWidgetState extends State<MenuWidget> {
             ),
             SizedBox(height: 4),
             Text(
-              '• Live price tracking\n• Portfolio management\n• Price alerts\n• Favorites watchlist\n• Interactive charts\n• Currency converter\n• Multi-currency support',
+              '• Live price tracking\n• Portfolio management\n• Price alerts\n• Favorites watchlist\n• Interactive charts\n• Currency converter\n• Multi-currency support\n• Auto-refresh',
               style: TextStyle(color: Colors.white54, fontSize: 13),
             ),
           ],
