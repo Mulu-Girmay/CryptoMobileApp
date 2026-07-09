@@ -3,6 +3,7 @@ import '../model/transaction.dart';
 import '../model/coin.dart';
 import '../services/transaction_service.dart';
 import '../utils/formatter.dart';
+import '../services//portofolio_calculator_service.dart';
 
 class TransactionScreen extends StatefulWidget {
   const TransactionScreen({super.key});
@@ -13,35 +14,48 @@ class TransactionScreen extends StatefulWidget {
 
 class _TransactionScreenState extends State<TransactionScreen> {
   final TransactionService _transactionService = TransactionService();
+  final PortfolioCalculatorService _calculator = PortfolioCalculatorService();
   List<Transaction> _transactions = [];
   bool _isLoading = true;
   TransactionType? _selectedType;
   String _searchQuery = '';
+  double _totalValue = 0.0;
+  double _totalSpent = 0.0;
+  double _totalReceived = 0.0;
 
   @override
   void initState() {
     super.initState();
-    _loadTransactions();
+    _loadData();
   }
 
-  Future<void> _loadTransactions() async {
+  Future<void> _loadData() async {
     setState(() => _isLoading = true);
     await _transactionService.loadTransactions();
     setState(() {
       _transactions = _transactionService.getTransactions();
       _isLoading = false;
+      _calculateStats();
     });
+  }
+
+  void _calculateStats() {
+    _totalValue = _transactionService.getTotalValue();
+    _totalSpent = _transactions
+        .where((t) => t.type == TransactionType.buy)
+        .fold(0.0, (sum, t) => sum + t.fiatValue);
+    _totalReceived = _transactions
+        .where((t) => t.type == TransactionType.sell)
+        .fold(0.0, (sum, t) => sum + t.fiatValue);
   }
 
   List<Transaction> get _filteredTransactions {
     var filtered = _transactions;
 
-    // Filter by type
     if (_selectedType != null) {
       filtered = filtered.where((t) => t.type == _selectedType).toList();
     }
 
-    // Filter by search query
     if (_searchQuery.isNotEmpty) {
       final query = _searchQuery.toLowerCase();
       filtered = filtered
@@ -53,9 +67,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
           .toList();
     }
 
-    // Sort by date (newest first)
     filtered.sort((a, b) => b.date.compareTo(a.date));
-
     return filtered;
   }
 
@@ -80,18 +92,99 @@ class _TransactionScreenState extends State<TransactionScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const AddTransactionSheet(),
+      builder: (context) => AddTransactionSheet(
+        onTransactionCreated: (transaction) {
+          _addTransactionToPortfolio(transaction);
+        },
+      ),
     );
 
     if (result != null) {
       await _transactionService.addTransaction(result);
       setState(() {
         _transactions = _transactionService.getTransactions();
+        _calculateStats();
+      });
+
+      // Show success message with transaction effect
+      _showTransactionSuccess(result);
+    }
+  }
+
+  Future<void> _addTransactionToPortfolio(Transaction transaction) async {
+    // This will be handled by the portfolio screen's refresh
+    // The portfolio screen will recalculate everything
+  }
+
+  void _showTransactionSuccess(Transaction transaction) {
+    final isPositive =
+        transaction.type == TransactionType.buy ||
+        transaction.type == TransactionType.deposit;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${isPositive ? '✅' : '📤'} ${transaction.type.displayName} Successful',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            Text(
+              '${transaction.amount.toStringAsFixed(4)} ${transaction.coinSymbol.toUpperCase()} @ ${Formatter.formatPrice(transaction.price)}',
+              style: const TextStyle(fontSize: 12),
+            ),
+          ],
+        ),
+        backgroundColor: isPositive ? const Color(0xFF22C55E) : Colors.orange,
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
+  Future<void> _deleteTransaction(String id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF0B1220),
+        title: const Text(
+          'Delete Transaction',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'Are you sure you want to delete this transaction? This will also update your portfolio balance.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white54),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _transactionService.deleteTransaction(id);
+      setState(() {
+        _transactions = _transactionService.getTransactions();
+        _calculateStats();
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Transaction added successfully!'),
-          backgroundColor: Color(0xFF22C55E),
+          content: Text('Transaction deleted successfully'),
+          backgroundColor: Colors.red,
         ),
       );
     }
@@ -107,10 +200,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
-          IconButton(
-            onPressed: _loadTransactions,
-            icon: const Icon(Icons.refresh),
-          ),
+          IconButton(onPressed: _loadData, icon: const Icon(Icons.refresh)),
         ],
       ),
       body: Column(
@@ -149,13 +239,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
   }
 
   Widget _buildSummaryStats() {
-    final totalValue = _transactionService.getTotalValue();
-    final totalSpent = _transactions
-        .where((t) => t.type == TransactionType.buy)
-        .fold(0.0, (sum, t) => sum + t.fiatValue);
-    final totalReceived = _transactions
-        .where((t) => t.type == TransactionType.sell)
-        .fold(0.0, (sum, t) => sum + t.fiatValue);
+    final profitLoss = _totalReceived - _totalSpent;
 
     return Container(
       margin: const EdgeInsets.all(16),
@@ -174,15 +258,22 @@ class _TransactionScreenState extends State<TransactionScreen> {
             Icons.receipt,
           ),
           _buildStatItem(
-            'Total Value',
-            Formatter.formatPrice(totalValue),
-            Icons.attach_money,
+            'Total Spent',
+            Formatter.formatPrice(_totalSpent),
+            Icons.trending_down,
+            color: Colors.red,
           ),
           _buildStatItem(
-            'P&L',
-            Formatter.formatPrice(totalReceived - totalSpent),
+            'Total Received',
+            Formatter.formatPrice(_totalReceived),
             Icons.trending_up,
-            color: totalReceived - totalSpent >= 0 ? Colors.green : Colors.red,
+            color: Colors.green,
+          ),
+          _buildStatItem(
+            'Net P&L',
+            Formatter.formatPrice(profitLoss),
+            Icons.attach_money,
+            color: profitLoss >= 0 ? Colors.green : Colors.red,
           ),
         ],
       ),
@@ -208,7 +299,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
           style: TextStyle(
             color: color ?? Colors.white,
             fontWeight: FontWeight.bold,
-            fontSize: 14,
+            fontSize: 13,
           ),
         ),
       ],
@@ -369,106 +460,128 @@ class _TransactionScreenState extends State<TransactionScreen> {
         transaction.type == TransactionType.buy ||
         transaction.type == TransactionType.deposit;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0B1220),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+    return Dismissible(
+      key: Key(transaction.id),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Icon(Icons.delete, color: Colors.white),
       ),
-      child: Row(
-        children: [
-          // Icon
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: transaction.type.color.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(8),
+      onDismissed: (direction) {
+        _deleteTransaction(transaction.id);
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0B1220),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withOpacity(0.05)),
+        ),
+        child: Row(
+          children: [
+            // Icon
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: transaction.type.color.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                transaction.type.icon,
+                color: transaction.type.color,
+                size: 20,
+              ),
             ),
-            child: Icon(
-              transaction.type.icon,
-              color: transaction.type.color,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Details
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      transaction.coinName,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: transaction.type.color.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        transaction.type.displayName,
-                        style: TextStyle(
-                          color: transaction.type.color,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
+            const SizedBox(width: 12),
+            // Details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        transaction.coinName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: transaction.type.color.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          transaction.type.displayName,
+                          style: TextStyle(
+                            color: transaction.type.color,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  if (transaction.type == TransactionType.swap)
+                    Text(
+                      '${transaction.amount.toStringAsFixed(4)} ${transaction.coinSymbol.toUpperCase()} → ${transaction.toCoin ?? '?'}',
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 12,
+                      ),
+                    )
+                  else
+                    Text(
+                      '${transaction.amount.toStringAsFixed(4)} ${transaction.coinSymbol.toUpperCase()} @ ${Formatter.formatPrice(transaction.price)}',
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 12,
+                      ),
                     ),
-                  ],
+                  if (transaction.note != null)
+                    Text(
+                      transaction.note!,
+                      style: const TextStyle(
+                        color: Colors.white38,
+                        fontSize: 10,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            // Amount
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  Formatter.formatPrice(transaction.fiatValue),
+                  style: TextStyle(
+                    color: isPositive ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                const SizedBox(height: 4),
-                if (transaction.type == TransactionType.swap)
-                  Text(
-                    '${transaction.amount.toStringAsFixed(4)} ${transaction.coinSymbol.toUpperCase()} → ${transaction.toCoin ?? '?'}',
-                    style: const TextStyle(color: Colors.white54, fontSize: 12),
-                  )
-                else
-                  Text(
-                    '${transaction.amount.toStringAsFixed(4)} ${transaction.coinSymbol.toUpperCase()} @ ${Formatter.formatPrice(transaction.price)}',
-                    style: const TextStyle(color: Colors.white54, fontSize: 12),
-                  ),
-                if (transaction.note != null)
-                  Text(
-                    transaction.note!,
-                    style: const TextStyle(
-                      color: Colors.white38,
-                      fontSize: 10,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
+                Text(
+                  _formatTime(transaction.date),
+                  style: const TextStyle(color: Colors.white38, fontSize: 10),
+                ),
               ],
             ),
-          ),
-          // Amount
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                Formatter.formatPrice(transaction.fiatValue),
-                style: TextStyle(
-                  color: isPositive ? Colors.green : Colors.red,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                '${_formatTime(transaction.date)}',
-                style: const TextStyle(color: Colors.white38, fontSize: 10),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -478,9 +591,11 @@ class _TransactionScreenState extends State<TransactionScreen> {
   }
 }
 
-// Add Transaction Sheet (to be implemented)
+// Add Transaction Sheet
 class AddTransactionSheet extends StatefulWidget {
-  const AddTransactionSheet({super.key});
+  final Function(Transaction) onTransactionCreated;
+
+  const AddTransactionSheet({super.key, required this.onTransactionCreated});
 
   @override
   State<AddTransactionSheet> createState() => _AddTransactionSheetState();
@@ -496,6 +611,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   DateTime _selectedDate = DateTime.now();
   List<Coin> _coins = [];
   bool _isLoadingCoins = true;
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -524,7 +640,9 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   }
 
   void _submit() {
-    if (_formKey.currentState!.validate()) {
+    if (_formKey.currentState!.validate() && !_isSubmitting) {
+      setState(() => _isSubmitting = true);
+
       final transaction = Transaction(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         coinId: _selectedCoin!.id,
@@ -539,14 +657,17 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         fee: null,
       );
 
+      widget.onTransactionCreated(transaction);
       Navigator.pop(context, transaction);
+
+      setState(() => _isSubmitting = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.8,
+      height: MediaQuery.of(context).size.height * 0.85,
       decoration: const BoxDecoration(
         color: Color(0xFF020617),
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -862,7 +983,9 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                       children: [
                         Expanded(
                           child: OutlinedButton(
-                            onPressed: () => Navigator.pop(context),
+                            onPressed: _isSubmitting
+                                ? null
+                                : () => Navigator.pop(context),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.white54,
                               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -879,7 +1002,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: _submit,
+                            onPressed: _isSubmitting ? null : _submit,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF22C55E),
                               foregroundColor: Colors.black,
@@ -888,10 +1011,21 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: const Text(
-                              'Add Transaction',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
+                            child: _isSubmitting
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.black,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Add Transaction',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                           ),
                         ),
                       ],

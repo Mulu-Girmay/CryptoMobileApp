@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import '../model/coin.dart';
 import '../services/currency_service.dart';
 import '../services/favorites_service.dart';
+import '../services/favorites_storage.dart';
 import '../services/refresh_service.dart';
-import '../utils/error_handler.dart';
 import '../widgets/reusable_card.dart';
+import '../widgets/coin_detail_dialog.dart';
 import '../utils/formatter.dart';
 
 class CryptoList extends StatefulWidget {
@@ -32,11 +33,8 @@ class _CryptoListState extends State<CryptoList>
   List<Coin> _coins = [];
   bool _isLoading = true;
   bool _isRefreshing = false;
-  AppError? _error;
+  String? _errorMessage;
   String _currentCurrency = 'usd';
-  DateTime _lastUpdated = DateTime.now();
-  String _lastUpdatedText = 'Never';
-  int _retryCount = 0;
 
   @override
   bool get wantKeepAlive => true;
@@ -63,37 +61,22 @@ class _CryptoListState extends State<CryptoList>
   Future<void> _loadCoins() async {
     setState(() {
       _isLoading = true;
-      _error = null;
+      _errorMessage = null;
     });
 
     try {
       _currentCurrency = _currencyService.currentCode;
-
-      // Load favorites
       await _favoritesService.loadFavorites();
-
-      // Fetch coins with error handling
-      final result = await fetchCoinsWithErrorHandling(_currentCurrency);
-
-      if (result.error != null) {
-        setState(() {
-          _error = result.error;
-          _isLoading = false;
-        });
-        return;
-      }
+      final coins = await fetchCoins(_currentCurrency);
 
       setState(() {
-        _coins = result.coins;
+        _coins = coins;
         _isLoading = false;
         _isRefreshing = false;
-        _lastUpdated = DateTime.now();
-        _updateLastUpdatedText();
-        _retryCount = 0;
       });
     } catch (e) {
       setState(() {
-        _error = AppError.fromException(e);
+        _errorMessage = e.toString();
         _isLoading = false;
         _isRefreshing = false;
       });
@@ -105,53 +88,23 @@ class _CryptoListState extends State<CryptoList>
 
     setState(() {
       _isRefreshing = true;
-      _error = null;
+      _errorMessage = null;
     });
 
     try {
       _currentCurrency = _currencyService.currentCode;
-
-      // Load favorites
       await _favoritesService.loadFavorites();
-
-      // Fetch coins with error handling
-      final result = await fetchCoinsWithErrorHandling(_currentCurrency);
-
-      if (result.error != null) {
-        setState(() {
-          _error = result.error;
-          _isRefreshing = false;
-        });
-        return;
-      }
+      final coins = await fetchCoins(_currentCurrency);
 
       setState(() {
-        _coins = result.coins;
+        _coins = coins;
         _isRefreshing = false;
-        _lastUpdated = DateTime.now();
-        _updateLastUpdatedText();
-        _retryCount = 0;
       });
     } catch (e) {
       setState(() {
-        _error = AppError.fromException(e);
+        _errorMessage = e.toString();
         _isRefreshing = false;
       });
-    }
-  }
-
-  void _updateLastUpdatedText() {
-    final now = DateTime.now();
-    final difference = now.difference(_lastUpdated);
-
-    if (difference.inMinutes < 1) {
-      _lastUpdatedText = 'Just now';
-    } else if (difference.inMinutes < 60) {
-      _lastUpdatedText = '${difference.inMinutes}m ago';
-    } else if (difference.inHours < 24) {
-      _lastUpdatedText = '${difference.inHours}h ago';
-    } else {
-      _lastUpdatedText = '${difference.inDays}d ago';
     }
   }
 
@@ -172,7 +125,6 @@ class _CryptoListState extends State<CryptoList>
     final query = widget.searchQuery.trim().toLowerCase();
 
     var filtered = _coins.where((coin) {
-      // Search filter
       if (query.isNotEmpty) {
         final matchesSearch =
             coin.name.toLowerCase().contains(query) ||
@@ -180,7 +132,6 @@ class _CryptoListState extends State<CryptoList>
         if (!matchesSearch) return false;
       }
 
-      // Favorites filter
       if (widget.showOnlyFavorites) {
         return coin.isFavorite;
       }
@@ -188,7 +139,6 @@ class _CryptoListState extends State<CryptoList>
       return true;
     }).toList();
 
-    // Sort favorites to the top
     if (!widget.showOnlyFavorites) {
       filtered.sort((a, b) {
         if (a.isFavorite && !b.isFavorite) return -1;
@@ -200,11 +150,188 @@ class _CryptoListState extends State<CryptoList>
     return filtered;
   }
 
+  void _showCoinDetail(Coin coin) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Dismiss',
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Center(
+            child: Container(
+              margin: const EdgeInsets.all(16),
+              constraints: BoxConstraints(
+                maxWidth: 480,
+                maxHeight: MediaQuery.of(context).size.height * 0.88,
+              ),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0B1220),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withOpacity(0.05)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header - Shows coin info with price and change
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
+                          color: Colors.white.withOpacity(0.05),
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(
+                            coin.image,
+                            width: 32,
+                            height: 32,
+                            errorBuilder: (c, e, s) => const Icon(
+                              Icons.image,
+                              size: 32,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    coin.name,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 1,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: coin.change >= 0
+                                          ? Colors.green.withOpacity(0.15)
+                                          : Colors.red.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      Formatter.formatChange(coin.change),
+                                      style: TextStyle(
+                                        color: coin.change >= 0
+                                            ? Colors.green
+                                            : Colors.red,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 1),
+                              Text(
+                                '${coin.symbol.toUpperCase()} • ${Formatter.formatPrice(coin.price)}',
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Favorite button in header
+                        IconButton(
+                          onPressed: () {
+                            _toggleFavorite(coin);
+                            // Force rebuild to update the star icon
+                            setState(() {});
+                          },
+                          icon: Icon(
+                            coin.isFavorite ? Icons.star : Icons.star_border,
+                            color: coin.isFavorite
+                                ? Colors.amber
+                                : Colors.white54,
+                            size: 20,
+                          ),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                        const SizedBox(width: 4),
+                        IconButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(
+                            Icons.close,
+                            color: Colors.white54,
+                            size: 22,
+                          ),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Scrollable Content - Using DialogCoinDetail
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+                      physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
+                      ),
+                      child: DialogCoinDetail(
+                        coin: coin,
+                        onFavoriteToggle: () {
+                          _toggleFavorite(coin);
+                          // Force rebuild to update the star icon
+                          setState(() {});
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(
+          opacity: Tween<double>(
+            begin: 0.0,
+            end: 1.0,
+          ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut)),
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.92, end: 1.0).animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeOut),
+            ),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
 
-    // Show loading
     if (_isLoading) {
       return const Center(
         child: Column(
@@ -218,27 +345,31 @@ class _CryptoListState extends State<CryptoList>
       );
     }
 
-    // Show error with retry
-    if (_error != null) {
-      return ErrorHandler.buildErrorWidget(
-        context,
-        _error!,
-        onRetry: () {
-          _retryCount++;
-          _loadCoins();
-        },
-        onDismiss: () {
-          setState(() {
-            _error = null;
-            _isLoading = false;
-          });
-        },
+    if (_errorMessage != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 60),
+            const SizedBox(height: 16),
+            Text(_errorMessage!, style: const TextStyle(color: Colors.white70)),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadCoins,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF22C55E),
+                foregroundColor: Colors.black,
+              ),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
       );
     }
 
     final filteredCoins = _filteredCoins;
 
-    if (filteredCoins.isEmpty && !_isLoading) {
+    if (filteredCoins.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -267,153 +398,28 @@ class _CryptoListState extends State<CryptoList>
       );
     }
 
-    return Column(
-      children: [
-        // Last updated indicator
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                _refreshService.isRunning
-                    ? Icons.refresh
-                    : Icons.not_interested,
-                size: 12,
-                color: _refreshService.isRunning
-                    ? Colors.green
-                    : Colors.white38,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                _isRefreshing ? 'Refreshing...' : 'Updated $_lastUpdatedText',
-                style: TextStyle(
-                  color: _isRefreshing ? Colors.green : Colors.white38,
-                  fontSize: 11,
-                ),
-              ),
-              if (_isRefreshing)
-                const Padding(
-                  padding: EdgeInsets.only(left: 8),
-                  child: SizedBox(
-                    height: 12,
-                    width: 12,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Color(0xFF22C55E),
-                    ),
-                  ),
-                ),
-              if (_retryCount > 0)
-                Container(
-                  margin: const EdgeInsets.only(left: 8),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    'Retry $_retryCount',
-                    style: const TextStyle(
-                      color: Colors.orange,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-            ],
-          ),
+    return RefreshIndicator(
+      onRefresh: _refreshCoins,
+      color: const Color(0xFF22C55E),
+      backgroundColor: const Color(0xFF0B1220),
+      child: GridView.builder(
+        padding: const EdgeInsets.all(12),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: widget.columns,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 0.82,
         ),
-
-        // Main grid
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: _refreshCoins,
-            color: const Color(0xFF22C55E),
-            backgroundColor: const Color(0xFF0B1220),
-            child: GridView.builder(
-              padding: const EdgeInsets.all(12),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: widget.columns,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 0.82,
-              ),
-              itemCount: filteredCoins.length,
-              itemBuilder: (context, index) {
-                final coin = filteredCoins[index];
-
-                return ReusableCard(
-                  coin: coin,
-                  onFavoriteToggle: () => _toggleFavorite(coin),
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) {
-                        final media = MediaQuery.sizeOf(context);
-                        final maxDialogWidth = media.width - 48;
-
-                        return AlertDialog(
-                          insetPadding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 24,
-                          ),
-                          backgroundColor: const Color(0xFF0B1220),
-                          title: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  coin.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(color: Colors.white),
-                                ),
-                              ),
-                              IconButton(
-                                onPressed: () => _toggleFavorite(coin),
-                                icon: Icon(
-                                  coin.isFavorite
-                                      ? Icons.star
-                                      : Icons.star_border,
-                                  color: coin.isFavorite
-                                      ? Colors.amber
-                                      : Colors.white54,
-                                ),
-                              ),
-                            ],
-                          ),
-                          contentPadding: const EdgeInsets.all(12),
-                          content: SizedBox(
-                            width: maxDialogWidth,
-                            child: SingleChildScrollView(
-                              child: OnClickReusableCard(
-                                coin: coin,
-                                onFavoriteToggle: () => _toggleFavorite(coin),
-                              ),
-                            ),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text(
-                                'Close',
-                                style: TextStyle(color: Color(0xFF22C55E)),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ),
-      ],
+        itemCount: filteredCoins.length,
+        itemBuilder: (context, index) {
+          final coin = filteredCoins[index];
+          return ReusableCard(
+            coin: coin,
+            onFavoriteToggle: () => _toggleFavorite(coin),
+            onTap: () => _showCoinDetail(coin),
+          );
+        },
+      ),
     );
   }
 }

@@ -53,9 +53,6 @@ class _PriceChartState extends State<PriceChart> {
         _showMockData = false;
       });
     } catch (e) {
-      // If API fails, use mock data
-      print('API Error: $e, using mock data');
-
       final mockData = HistoricalService.generateMockData(
         coinId: widget.coinId,
         coinName: widget.coinName,
@@ -86,43 +83,35 @@ class _PriceChartState extends State<PriceChart> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Timeframe selector - Very compact
         _buildTimeframeSelector(),
 
-        const SizedBox(height: 16),
+        const SizedBox(height: 4),
 
-        // Chart
-        if (_isLoading)
-          const Center(
-            child: SizedBox(
-              height: 250,
-              child: Center(
-                child: CircularProgressIndicator(color: Color(0xFF22C55E)),
-              ),
-            ),
-          )
-        else if (_historicalData != null)
-          _buildChart(context)
-        else
-          Center(
-            child: Container(
-              height: 250,
-              decoration: BoxDecoration(
-                color: const Color(0xFF0B1220),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Center(
-                child: Text(
-                  _errorMessage.isEmpty ? 'No data available' : _errorMessage,
-                  style: const TextStyle(color: Colors.white54),
+        // Chart area - Now Expanded to fit parent constraints
+        Expanded(
+          child: _isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    color: Color(0xFF22C55E),
+                    strokeWidth: 2,
+                  ),
+                )
+              : _historicalData != null
+              ? _buildChart()
+              : Center(
+                  child: Text(
+                    _errorMessage.isEmpty ? 'No data available' : _errorMessage,
+                    style: const TextStyle(color: Colors.white54, fontSize: 10),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-              ),
-            ),
-          ),
+        ),
 
-        const SizedBox(height: 8),
-
-        // Stats
-        if (_historicalData != null && !_isLoading) _buildStats(context),
+        if (_historicalData != null && !_isLoading) ...[
+          const SizedBox(height: 4),
+          _buildStats(),
+        ],
       ],
     );
   }
@@ -137,10 +126,10 @@ class _PriceChartState extends State<PriceChart> {
     ];
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
       decoration: BoxDecoration(
         color: const Color(0xFF0B1220),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(6),
         border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
       child: Row(
@@ -150,12 +139,12 @@ class _PriceChartState extends State<PriceChart> {
             child: GestureDetector(
               onTap: () => _changeTimeframe(timeframe),
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.symmetric(vertical: 3),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? const Color(0xFF22C55E).withOpacity(0.2)
                       : Colors.transparent,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(4),
                   border: isSelected
                       ? Border.all(color: const Color(0xFF22C55E))
                       : null,
@@ -170,7 +159,7 @@ class _PriceChartState extends State<PriceChart> {
                       fontWeight: isSelected
                           ? FontWeight.bold
                           : FontWeight.normal,
-                      fontSize: 12,
+                      fontSize: 9,
                     ),
                   ),
                 ),
@@ -182,23 +171,20 @@ class _PriceChartState extends State<PriceChart> {
     );
   }
 
-  Widget _buildChart(BuildContext context) {
+  Widget _buildChart() {
     final data = _historicalData!;
     final isPositive = data.priceChange >= 0;
 
-    // Prepare chart data
     final spots = data.data.asMap().entries.map((entry) {
       final index = entry.key;
       final point = entry.value;
       return FlSpot(index.toDouble(), point.price);
     }).toList();
 
-    // Calculate min and max for Y axis with some padding
     final minPrice = data.lowestPrice * 0.99;
     final maxPrice = data.highestPrice * 1.01;
     final priceRange = maxPrice - minPrice;
 
-    // Determine interval for Y axis labels
     double interval;
     if (priceRange > 1000) {
       interval = 500;
@@ -212,220 +198,154 @@ class _PriceChartState extends State<PriceChart> {
       interval = 0.1;
     }
 
-    return Container(
-      height: 250,
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0B1220),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      widget.coinSymbol.toUpperCase(),
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isPositive
-                            ? Colors.green.withOpacity(0.15)
-                            : Colors.red.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '${isPositive ? '+' : ''}${data.priceChangePercentage.toStringAsFixed(2)}%',
-                        style: TextStyle(
-                          color: isPositive ? Colors.green : Colors.red,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    if (_showMockData)
-                      Container(
-                        margin: const EdgeInsets.only(left: 8),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Text(
-                          'SIM',
-                          style: TextStyle(
-                            color: Colors.orange,
-                            fontSize: 8,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                Text(
-                  Formatter.formatPrice(data.lastPrice),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
+    return Stack(
+      children: [
+        LineChart(
+          LineChartData(
+            gridData: FlGridData(
+              show: true,
+              drawVerticalLine: false,
+              horizontalInterval: interval,
+              getDrawingHorizontalLine: (value) {
+                return const FlLine(color: Colors.white12, strokeWidth: 0.5);
+              },
             ),
-          ),
-
-          // Chart
-          Expanded(
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: interval,
-                  getDrawingHorizontalLine: (value) {
-                    return const FlLine(color: Colors.white12, strokeWidth: 1);
+            titlesData: FlTitlesData(
+              show: true,
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 12,
+                  getTitlesWidget: (value, meta) {
+                    final index = value.toInt();
+                    if (index >= 0 && index < data.data.length) {
+                      final point = data.data[index];
+                      final step = (data.data.length / 4).ceil();
+                      if (index % step == 0 || index == data.data.length - 1) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            '${point.timestamp.day}/${point.timestamp.month}',
+                            style: const TextStyle(
+                              color: Colors.white38,
+                              fontSize: 7,
+                            ),
+                          ),
+                        );
+                      }
+                    }
+                    return const SizedBox.shrink();
                   },
                 ),
-                titlesData: FlTitlesData(
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 24,
+                  getTitlesWidget: (value, meta) {
+                    final price = value;
+                    return Text(
+                      '\$${price.toStringAsFixed(price > 100 ? 0 : 2)}',
+                      style: const TextStyle(
+                        color: Colors.white38,
+                        fontSize: 7,
+                      ),
+                      textAlign: TextAlign.right,
+                    );
+                  },
+                ),
+              ),
+              topTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              rightTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+            ),
+            borderData: FlBorderData(show: false),
+            minX: 0,
+            maxX: data.data.length.toDouble() - 1,
+            minY: minPrice,
+            maxY: maxPrice,
+            lineBarsData: [
+              LineChartBarData(
+                spots: spots,
+                isCurved: true,
+                color: isPositive ? Colors.green : Colors.red,
+                barWidth: 1.5,
+                isStrokeCapRound: true,
+                dotData: const FlDotData(show: false),
+                belowBarData: BarAreaData(
                   show: true,
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 20,
-                      getTitlesWidget: (value, meta) {
-                        final index = value.toInt();
-                        if (index >= 0 && index < data.data.length) {
-                          final point = data.data[index];
-                          // Show every nth label based on data length
-                          final step = (data.data.length / 6).ceil();
-                          if (index % step == 0 ||
-                              index == data.data.length - 1) {
-                            return Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text(
-                                '${point.timestamp.day}/${point.timestamp.month}',
-                                style: const TextStyle(
-                                  color: Colors.white38,
-                                  fontSize: 9,
-                                ),
-                              ),
-                            );
-                          }
-                        }
-                        return const SizedBox.shrink();
-                      },
-                    ),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 40,
-                      getTitlesWidget: (value, meta) {
-                        final price = value;
-                        return Text(
-                          '\$${price.toStringAsFixed(price > 100 ? 0 : 2)}',
-                          style: const TextStyle(
-                            color: Colors.white38,
-                            fontSize: 9,
-                          ),
-                          textAlign: TextAlign.right,
-                        );
-                      },
-                    ),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
+                  color: (isPositive ? Colors.green : Colors.red).withOpacity(
+                    0.08,
                   ),
                 ),
-                borderData: FlBorderData(show: false),
-                minX: 0,
-                maxX: data.data.length.toDouble() - 1,
-                minY: minPrice,
-                maxY: maxPrice,
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: spots,
-                    isCurved: true,
-                    color: isPositive ? Colors.green : Colors.red,
-                    barWidth: 2,
-                    isStrokeCapRound: true,
-                    dotData: const FlDotData(show: false),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: (isPositive ? Colors.green : Colors.red)
-                          .withOpacity(0.1),
-                    ),
-                  ),
-                ],
-                lineTouchData: LineTouchData(
-                  touchTooltipData: LineTouchTooltipData(
-                    getTooltipItems: (List<LineBarSpot> touchedSpots) {
-                      return touchedSpots.map((spot) {
-                        final price = spot.y;
-                        final index = spot.x.toInt();
-                        final point = data.data[index];
-                        return LineTooltipItem(
-                          '\$${price.toStringAsFixed(2)}\n${_formatTimestamp(point.timestamp)}',
-                          const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        );
-                      }).toList();
-                    },
-                    tooltipBgColor: const Color(0xFF0B1220),
-                    tooltipBorder: BorderSide(
-                      color: Colors.white.withOpacity(0.1),
-                    ),
-                  ),
+              ),
+            ],
+            lineTouchData: LineTouchData(
+              touchTooltipData: LineTouchTooltipData(
+                getTooltipItems: (List<LineBarSpot> touchedSpots) {
+                  return touchedSpots.map((spot) {
+                    final price = spot.y;
+                    final index = spot.x.toInt();
+                    final point = data.data[index];
+                    return LineTooltipItem(
+                      '\$${price.toStringAsFixed(2)}\n${_formatTime(point.timestamp)}',
+                      const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    );
+                  }).toList();
+                },
+                tooltipBgColor: const Color(0xFF0B1220),
+                tooltipBorder: BorderSide(color: Colors.white.withOpacity(0.1)),
+              ),
+            ),
+          ),
+        ),
+        if (_showMockData)
+          Positioned(
+            top: 2,
+            right: 2,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(3),
+              ),
+              child: const Text(
+                'SIM',
+                style: TextStyle(
+                  color: Colors.orange,
+                  fontSize: 6,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
           ),
-        ],
-      ),
+      ],
     );
   }
 
-  Widget _buildStats(BuildContext context) {
+  Widget _buildStats() {
     final data = _historicalData!;
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
         color: const Color(0xFF0B1220),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(6),
         border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildStatItem('Highest', Formatter.formatPrice(data.highestPrice)),
-          _buildStatItem('Lowest', Formatter.formatPrice(data.lowestPrice)),
-          _buildStatItem('Average', Formatter.formatPrice(data.averagePrice)),
+          _buildStatItem('High', Formatter.formatPrice(data.highestPrice)),
+          _buildStatItem('Low', Formatter.formatPrice(data.lowestPrice)),
+          _buildStatItem('Avg', Formatter.formatPrice(data.averagePrice)),
         ],
       ),
     );
@@ -434,24 +354,21 @@ class _PriceChartState extends State<PriceChart> {
   Widget _buildStatItem(String label, String value) {
     return Column(
       children: [
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white54, fontSize: 11),
-        ),
-        const SizedBox(height: 4),
+        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 8)),
+        const SizedBox(height: 1),
         Text(
           value,
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
-            fontSize: 13,
+            fontSize: 9,
           ),
         ),
       ],
     );
   }
 
-  String _formatTimestamp(DateTime timestamp) {
+  String _formatTime(DateTime timestamp) {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
 
@@ -467,7 +384,6 @@ class _PriceChartState extends State<PriceChart> {
   }
 }
 
-// Extension for HistoricalData
 extension HistoricalDataExtension on HistoricalData {
   double get lastPrice {
     if (data.isEmpty) return 0;

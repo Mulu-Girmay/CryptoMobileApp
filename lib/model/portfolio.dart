@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import "package:flutter/material.dart";
 
 class PortfolioItem {
   final String coinId;
@@ -45,19 +45,16 @@ class PortfolioItem {
     );
   }
 
-  // Calculate current value based on current price
   double calculateCurrentValue(double currentPrice) {
     return currentPrice * amount;
   }
 
-  // Calculate profit/loss
   double calculateProfit(double currentPrice) {
     final currentValue = calculateCurrentValue(currentPrice);
     final purchaseValue = purchasePrice * amount;
     return currentValue - purchaseValue;
   }
 
-  // Calculate profit/loss percentage
   double calculateProfitPercentage(double currentPrice) {
     final purchaseValue = purchasePrice * amount;
     if (purchaseValue == 0) return 0.0;
@@ -65,38 +62,46 @@ class PortfolioItem {
     return (profit / purchaseValue) * 100;
   }
 
-  // Calculate total purchase value
   double get purchaseValue {
     return purchasePrice * amount;
   }
 
-  // Calculate return on investment (ROI)
-  double calculateROI(double currentPrice) {
-    final purchaseValue = purchasePrice * amount;
-    if (purchaseValue == 0) return 0.0;
-    final currentValue = calculateCurrentValue(currentPrice);
-    return ((currentValue - purchaseValue) / purchaseValue) * 100;
-  }
-
-  // Check if position is profitable
   bool isProfitable(double currentPrice) {
     return calculateProfit(currentPrice) > 0;
   }
 
-  // Get profit/loss color
   Color getProfitLossColor(double currentPrice) {
     return isProfitable(currentPrice) ? Colors.green : Colors.red;
   }
 
-  // Format profit/loss as string with sign
   String formatProfit(double currentPrice) {
     final profit = calculateProfit(currentPrice);
     return '${profit >= 0 ? '+' : ''}${profit.toStringAsFixed(2)}';
   }
 
-  // Format profit/loss percentage as string with sign
   String formatProfitPercentage(double currentPrice) {
     final percentage = calculateProfitPercentage(currentPrice);
     return '${percentage >= 0 ? '+' : ''}${percentage.toStringAsFixed(2)}%';
   }
+}
+
+// New: Portfolio Summary with Cash Balance
+class PortfolioSummary {
+  final double totalValue; // Total value of all holdings + cash
+  final double totalInvested; // Total amount invested (purchase value)
+  final double totalProfit; // Total profit/loss
+  final double cashBalance; // Available cash/fiat balance
+  final double holdingsValue; // Value of crypto holdings
+  final double profitPercentage; // Profit percentage
+
+  PortfolioSummary({
+    required this.totalValue,
+    required this.totalInvested,
+    required this.totalProfit,
+    required this.cashBalance,
+    required this.holdingsValue,
+    required this.profitPercentage,
+  });
+
+  bool get isProfitable => totalProfit >= 0;
 }

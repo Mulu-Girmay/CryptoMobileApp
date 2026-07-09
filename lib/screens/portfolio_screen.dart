@@ -6,6 +6,7 @@ import '../services/transaction_storage.dart';
 import '../services/portfolio_performance_service.dart';
 import '../utils/formatter.dart';
 import '../widgets/performance_chart.dart';
+import '../services/portofolio_calculator_service.dart';
 
 class PortfolioScreen extends StatefulWidget {
   const PortfolioScreen({super.key});
@@ -20,6 +21,9 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
   bool _isLoading = true;
   double _totalValue = 0.0;
   double _totalProfit = 0.0;
+  double _cashBalance = 0.0;
+  double _holdingsValue = 0.0;
+  double _totalInvested = 0.0;
   List<PerformanceDataPoint> _performanceData = [];
   bool _isLoadingPerformance = false;
 
@@ -40,8 +44,9 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
         _portfolioItems = items;
         _coins = coins;
         _isLoading = false;
-        _calculateTotals();
       });
+
+      await _calculatePortfolioSummary();
 
       if (_portfolioItems.isNotEmpty && _coins.isNotEmpty) {
         await _loadPerformanceData();
@@ -51,6 +56,56 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
         _isLoading = false;
       });
       _showError('Failed to load portfolio: $e');
+    }
+  }
+
+  Future<void> _calculatePortfolioSummary() async {
+    try {
+      final transactions = await TransactionStorage.loadTransactions();
+      final calculator = PortfolioCalculatorService();
+
+      // Calculate cash balance
+      _cashBalance = await calculator.getCashBalance(
+        transactions: transactions,
+        initialCash: 0.0,
+      );
+
+      // Calculate holdings value and profit
+      double holdingsValue = 0.0;
+      double totalProfit = 0.0;
+      double totalInvested = 0.0;
+
+      for (final item in _portfolioItems) {
+        final coin = _coins.firstWhere(
+          (c) => c.id == item.coinId,
+          orElse: () => Coin(
+            id: item.coinId,
+            name: item.coinName,
+            symbol: item.coinSymbol,
+            image: item.coinImage,
+            price: 0,
+            change: 0,
+            marketCap: 0,
+            totalVolume: 0,
+            high24h: 0,
+            low24h: 0,
+          ),
+        );
+
+        final currentValue = item.calculateCurrentValue(coin.price);
+        holdingsValue += currentValue;
+        totalProfit += item.calculateProfit(coin.price);
+        totalInvested += item.purchaseValue;
+      }
+
+      setState(() {
+        _holdingsValue = holdingsValue;
+        _totalProfit = totalProfit;
+        _totalInvested = totalInvested;
+        _totalValue = holdingsValue + _cashBalance;
+      });
+    } catch (e) {
+      print('Error calculating portfolio summary: $e');
     }
   }
 
@@ -75,37 +130,6 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
       print('Error loading performance: $e');
       setState(() => _isLoadingPerformance = false);
     }
-  }
-
-  void _calculateTotals() {
-    double totalValue = 0.0;
-    double totalProfit = 0.0;
-
-    for (final item in _portfolioItems) {
-      final coin = _coins.firstWhere(
-        (c) => c.id == item.coinId,
-        orElse: () => Coin(
-          id: item.coinId,
-          name: item.coinName,
-          symbol: item.coinSymbol,
-          image: item.coinImage,
-          price: 0,
-          change: 0,
-          marketCap: 0,
-          totalVolume: 0,
-          high24h: 0,
-          low24h: 0,
-        ),
-      );
-
-      totalValue += item.calculateCurrentValue(coin.price);
-      totalProfit += item.calculateProfit(coin.price);
-    }
-
-    setState(() {
-      _totalValue = totalValue;
-      _totalProfit = totalProfit;
-    });
   }
 
   Future<void> _addToPortfolio(Coin coin) async {
@@ -203,7 +227,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                 _portfolioItems.add(newItem);
               });
               _savePortfolio();
-              _calculateTotals();
+              _calculatePortfolioSummary();
               _loadPerformanceData();
             },
             style: ElevatedButton.styleFrom(
@@ -250,7 +274,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
         _portfolioItems.removeAt(index);
       });
       _savePortfolio();
-      _calculateTotals();
+      _calculatePortfolioSummary();
       _loadPerformanceData();
     }
   }
@@ -381,6 +405,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                     ),
                     child: Column(
                       children: [
+                        // Total Value
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -402,6 +427,62 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                           ],
                         ),
                         const SizedBox(height: 12),
+                        // Holdings and Cash breakdown
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  const Text(
+                                    'Holdings',
+                                    style: TextStyle(
+                                      color: Colors.white54,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    Formatter.formatPrice(_holdingsValue),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              width: 1,
+                              height: 30,
+                              color: Colors.white.withOpacity(0.1),
+                            ),
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  const Text(
+                                    'Cash Balance',
+                                    style: TextStyle(
+                                      color: Colors.white54,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    Formatter.formatPrice(_cashBalance),
+                                    style: TextStyle(
+                                      color: _cashBalance >= 0
+                                          ? Colors.white
+                                          : Colors.red,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        // Total P&L
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -425,6 +506,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                           ],
                         ),
                         const SizedBox(height: 8),
+                        // Assets count
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -467,10 +549,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                   else
                     PerformanceChart(
                       performanceData: _performanceData,
-                      totalInvested: _portfolioItems.fold<double>(
-                        0,
-                        (sum, item) => sum + (item.purchasePrice * item.amount),
-                      ),
+                      totalInvested: _totalInvested,
                       currentValue: _totalValue,
                     ),
 

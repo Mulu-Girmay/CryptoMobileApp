@@ -16,7 +16,8 @@ class ConnectionService {
   // Helper to safely evaluate connectivity regardless of plugin version
   bool _isResultConnected(dynamic results) {
     if (results is List) {
-      return results.isNotEmpty && !results.contains(ConnectivityResult.none);
+      // If the list contains anything other than 'none', we have a hardware connection
+      return results.any((result) => result != ConnectivityResult.none);
     }
     return results != ConnectivityResult.none;
   }
@@ -31,33 +32,48 @@ class ConnectionService {
   Future<bool> checkConnection() async {
     try {
       final results = await _connectivity.checkConnectivity();
-      final hasConnectivity = _isResultConnected(results);
+      final hasHardwareConnection = _isResultConnected(results);
 
-      if (!hasConnectivity) {
+      // If the hardware itself says disconnected, trust it.
+      if (!hasHardwareConnection) {
         _isConnected = false;
         return false;
       }
 
+      // If we have a hardware connection, try a very quick verification.
+      // We check multiple hosts to avoid false negatives.
       try {
-        final addresses = await InternetAddress.lookup(
-          'google.com',
-        ).timeout(const Duration(seconds: 5));
-
-        final hasInternet =
-            addresses.isNotEmpty && addresses[0].rawAddress.isNotEmpty;
+        final hasInternet = await Future.any([
+          _verifyHost('google.com'),
+          _verifyHost('cloudflare.com'),
+          _verifyHost('apple.com'),
+        ]).timeout(const Duration(seconds: 3));
 
         _isConnected = hasInternet;
         _hasCheckedOnce = true;
         return hasInternet;
       } catch (_) {
-        if (_hasCheckedOnce && _isConnected) {
+        // FALLBACK: If DNS fails but hardware says we are connected,
+        // we'll be optimistic and return TRUE to allow the actual API call to try.
+        // This fixes issues where DNS lookups are blocked but the API isn't.
+        if (!_hasCheckedOnce) {
+          _hasCheckedOnce = true;
+          _isConnected = true;
           return true;
         }
-        _isConnected = false;
-        return false;
+        return _isConnected;
       }
     } catch (e) {
-      _isConnected = false;
+      // On error, default to whatever our last known state was
+      return _isConnected;
+    }
+  }
+
+  Future<bool> _verifyHost(String host) async {
+    try {
+      final addresses = await InternetAddress.lookup(host);
+      return addresses.isNotEmpty && addresses[0].rawAddress.isNotEmpty;
+    } catch (_) {
       return false;
     }
   }

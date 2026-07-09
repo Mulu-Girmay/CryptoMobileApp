@@ -1,13 +1,6 @@
-import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
-
 import 'package:http/http.dart' as http;
-
-import '../services/connection_service.dart';
 import '../services/favorites_storage.dart';
-import '../utils/error_handler.dart';
-import '../utils/retry_helper.dart';
 
 class Coin {
   final String id;
@@ -68,91 +61,31 @@ class Coin {
   }
 }
 
-class CoinFetchResult {
-  final List<Coin> coins;
-  final AppError? error;
-  final bool isFromCache;
-
-  CoinFetchResult({required this.coins, this.error, this.isFromCache = false});
-}
-
-Future<CoinFetchResult> fetchCoinsWithErrorHandling(String currency) async {
+Future<List<Coin>> fetchCoins(String currency) async {
   try {
-    // Check connection first
-    final connectionService = ConnectionService();
-    final isConnected = await connectionService.checkConnection();
-
-    if (!isConnected) {
-      return CoinFetchResult(
-        coins: [],
-        error: AppError(
-          message: 'No internet connection',
-          details: 'Please connect to the internet and try again',
-          type: ErrorType.network,
-          isRetryable: true,
-        ),
-      );
-    }
-
-    // Use retry helper
-    final data = await RetryHelper.retry(
-      () => _fetchCoins(currency),
-      maxRetries: 3,
-      delay: const Duration(seconds: 2),
-      timeout: const Duration(seconds: 30),
-      shouldRetry: (e) {
-        // Don't retry on certain errors
-        if (e is http.ClientException) return true;
-        if (e.toString().contains('429')) return true;
-        if (e.toString().contains('500')) return true;
-        return false;
-      },
+    final response = await http.get(
+      Uri.parse(
+        'https://api.coingecko.com/api/v3/coins/markets?vs_currency=$currency&order=market_cap_desc&per_page=20&page=1&sparkline=false',
+      ),
     );
 
-    return CoinFetchResult(coins: data);
-  } on SocketException catch (e) {
-    return CoinFetchResult(coins: [], error: AppError.fromException(e));
-  } on TimeoutException catch (e) {
-    return CoinFetchResult(coins: [], error: AppError.fromException(e));
-  } catch (e) {
-    return CoinFetchResult(coins: [], error: AppError.fromException(e));
-  }
-}
+    if (response.statusCode == 200) {
+      List data = jsonDecode(response.body);
+      final coins = data.map((e) => Coin.fromJson(e)).toList();
 
-Future<List<Coin>> _fetchCoins(String currency) async {
-  final response = await http.get(
-    Uri.parse(
-      'https://api.coingecko.com/api/v3/coins/markets?vs_currency=$currency&order=market_cap_desc&per_page=20&page=1&sparkline=false',
-    ),
-  );
-
-  if (response.statusCode == 200) {
-    List data = jsonDecode(response.body);
-    final coins = data.map((e) => Coin.fromJson(e)).toList();
-
-    // Load favorites from storage
-    final favorites = await FavoritesStorage.loadFavorites();
-    for (var coin in coins) {
-      if (favorites.contains(coin.id)) {
-        coin.isFavorite = true;
+      // Load favorites from storage
+      final favorites = await FavoritesStorage.loadFavorites();
+      for (var coin in coins) {
+        if (favorites.contains(coin.id)) {
+          coin.isFavorite = true;
+        }
       }
+
+      return coins;
+    } else {
+      throw Exception('Failed to load coins: ${response.statusCode}');
     }
-
-    return coins;
-  } else if (response.statusCode == 429) {
-    throw Exception('429: Rate limit exceeded');
-  } else if (response.statusCode >= 500) {
-    throw Exception('${response.statusCode}: Server error');
-  } else {
-    throw Exception('Failed to load coins: ${response.statusCode}');
+  } catch (e) {
+    throw Exception('Error: $e');
   }
-}
-
-// Keep existing fetchCoins for backward compatibility
-Future<List<Coin>> fetchCoins(String currency) async {
-  final result = await fetchCoinsWithErrorHandling(currency);
-  if (result.error != null) {
-    throw result.error!;
-  }
-  return result.coins;
 }

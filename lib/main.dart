@@ -1,7 +1,5 @@
 import 'package:crypto/screens/home.dart';
-import 'package:crypto/services/background_service.dart';
 import 'package:crypto/services/currency_service.dart';
-import 'package:crypto/services/notification_service.dart';
 import 'package:crypto/services/refresh_service.dart';
 import 'package:crypto/services/theme_notifier.dart';
 import 'package:crypto/services/theme_service.dart';
@@ -11,17 +9,15 @@ import 'package:provider/provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize services
-  await NotificationService.init();
+  // Initialize essential services only
   await CurrencyService().initialize();
 
-  // Start auto-refresh
+  // Start auto-refresh for coin data
   RefreshService().startAutoRefresh(intervalSeconds: 30);
-  BackgroundAlertService.start();
 
   // Initialize theme
   final themeNotifier = ThemeNotifier();
-  await themeNotifier.setThemeMode(ThemeMode.dark); // Default
+  await themeNotifier.setThemeMode(ThemeMode.dark); // Default to Dark Mode
 
   runApp(
     ChangeNotifierProvider(

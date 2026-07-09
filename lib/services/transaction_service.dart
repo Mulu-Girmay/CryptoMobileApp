@@ -1,5 +1,5 @@
-import '../model/transaction.dart';
-import 'transaction_storage.dart';
+import 'package:crypto/model/transaction.dart';
+import 'package:crypto/services/transaction_storage.dart';
 
 class TransactionService {
   static final TransactionService _instance = TransactionService._internal();

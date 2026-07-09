@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../model/coin.dart';
 import '../widgets/price_chart.dart';
 import '../utils/formatter.dart';
-import "../screens/Converter.dart";
+import "Converter.dart";
 
 class ChartScreen extends StatefulWidget {
   final Coin coin;

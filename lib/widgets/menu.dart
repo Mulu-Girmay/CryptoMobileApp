@@ -11,8 +11,8 @@ import 'package:crypto/services/theme_notifier.dart';
 import 'package:flutter/material.dart';
 import '../screens/refresh_setting_screen.dart';
 import '../services/theme_service.dart';
-import '../screens/transaction_screen.dart';
 import '../screens/news_screen.dart';
+import '../screens/transaction_screen.dart';
 
 class MenuWidget extends StatefulWidget {
   const MenuWidget({super.key});
@@ -138,12 +138,7 @@ class _MenuWidgetState extends State<MenuWidget> {
                       onTap: () => Navigator.of(context).pop(),
                       isActive: true,
                     ),
-                    _buildMenuItem(
-                      icon: Icons.newspaper,
-                      title: 'News',
-                      subtitle: 'Crypto news & market sentiment',
-                      onTap: () => _openScreen(context, const NewsScreen()),
-                    ),
+                    
                     _buildMenuItem(
                       icon: Icons.equalizer,
                       title: 'Converter',

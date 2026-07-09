@@ -7,7 +7,7 @@ import '../utils/error_handler.dart';
 import '../utils/retry_helper.dart';
 
 class NewsService {
-  static const String _baseUrl = 'https://cryptopanic.com/api/v1/posts/';
+  static const String _baseUrl = 'https://cryptopanic.com/api/v2/posts/';
 
   // Free API key - you can get your own at https://cryptopanic.com/developers/api/
   // For production, consider using environment variables
