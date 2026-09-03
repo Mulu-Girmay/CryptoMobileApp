@@ -118,7 +118,7 @@ class _RefreshSettingsScreenState extends State<RefreshSettingsScreen> {
                           }
                         });
                       },
-                      activeColor: const Color(0xFF22C55E),
+                      activeThumbColor: const Color(0xFF22C55E),
                     ),
                   ],
                 ),
@@ -171,7 +171,7 @@ class _RefreshSettingsScreenState extends State<RefreshSettingsScreen> {
                               _refreshService.setInterval(interval);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Interval set to ${label}'),
+                                  content: Text('Interval set to $label'),
                                   backgroundColor: const Color(0xFF22C55E),
                                   duration: const Duration(seconds: 1),
                                 ),

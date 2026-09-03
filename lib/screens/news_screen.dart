@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../model/news.dart';
 import '../services/news_service.dart';
-import '../utils/formatter.dart';
 
 class NewsScreen extends StatefulWidget {
   const NewsScreen({super.key});
@@ -22,16 +21,7 @@ class _NewsScreenState extends State<NewsScreen> {
   bool _hasMore = true;
   bool _isLoadingMore = false;
 
-  final List<String> _currencies = [
-    'All',
-    'BTC',
-    'ETH',
-    'ADA',
-    'SOL',
-    'DOT',
-    'AVAX',
-    'MATIC',
-  ];
+  final List<String> _currencies = ['All', 'BTC', 'ETH', 'ADA', 'SOL', 'DOT', 'AVAX', 'MATIC'];
 
   @override
   void initState() {
@@ -45,53 +35,32 @@ class _NewsScreenState extends State<NewsScreen> {
       if (_isLoadingMore || !_hasMore) return;
       setState(() => _isLoadingMore = true);
     } else {
-      setState(() {
-        _isLoading = true;
-        _error = null;
-        _articles = [];
-      });
+      setState(() { _isLoading = true; _error = null; _articles = []; });
     }
 
     try {
       final currency = _selectedCurrency != 'All' ? _selectedCurrency : null;
-      final response = await _newsService.fetchNews(
-        currency: currency,
-        limit: 20,
-      );
+      final response = await _newsService.fetchNews(currency: currency, limit: 20);
 
       if (response.error != null) {
-        setState(() {
-          _error = response.error;
-          _isLoading = false;
-          _isLoadingMore = false;
-        });
+        setState(() { _error = 'Unable to load news. Check your connection and try again.'; _isLoading = false; _isLoadingMore = false; });
         return;
       }
 
       setState(() {
-        if (loadMore) {
-          _articles.addAll(response.articles);
-        } else {
-          _articles = response.articles;
-        }
+        if (loadMore) { _articles.addAll(response.articles); } else { _articles = response.articles; }
         _isLoading = false;
         _isLoadingMore = false;
         _hasMore = response.articles.isNotEmpty;
       });
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-        _isLoadingMore = false;
-      });
+      setState(() { _error = 'Something went wrong. Please try again later.'; _isLoading = false; _isLoadingMore = false; });
     }
   }
 
   Future<void> _loadSentiment() async {
     final data = await _newsService.getMarketSentiment();
-    setState(() {
-      _sentimentData = data;
-    });
+    setState(() => _sentimentData = data);
   }
 
   Future<void> _refresh() async {
@@ -106,63 +75,44 @@ class _NewsScreenState extends State<NewsScreen> {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not open article'),
-            backgroundColor: Colors.red,
-          ),
+          const SnackBar(content: Text('Could not open article'), backgroundColor: Colors.red),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error opening article: $e'),
-          backgroundColor: Colors.red,
-        ),
+        const SnackBar(content: Text('Could not open the article. Try again later.'), backgroundColor: Colors.red),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFF020617),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Crypto News'),
-        backgroundColor: const Color(0xFF0F172A),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh)),
-        ],
+        actions: [IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh))],
       ),
       body: Column(
         children: [
-          // Sentiment Indicator
-          _buildSentimentIndicator(),
-
-          // Currency Filter
-          _buildCurrencyFilter(),
-
-          // News List
+          _buildSentimentIndicator(context),
+          _buildCurrencyFilter(context),
           Expanded(
             child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(color: Color(0xFF22C55E)),
-                  )
+                ? const Center(child: CircularProgressIndicator(color: Color(0xFF22C55E)))
                 : _error != null
-                ? _buildErrorWidget()
+                ? _buildErrorWidget(context)
                 : _articles.isEmpty
-                ? _buildEmptyWidget()
+                ? _buildEmptyWidget(context)
                 : RefreshIndicator(
                     onRefresh: _refresh,
                     color: const Color(0xFF22C55E),
                     child: ListView.builder(
                       itemCount: _articles.length + (_hasMore ? 1 : 0),
                       itemBuilder: (context, index) {
-                        if (index == _articles.length) {
-                          return _buildLoadMore();
-                        }
-                        return _buildNewsCard(_articles[index]);
+                        if (index == _articles.length) return _buildLoadMore(context);
+                        return _buildNewsCard(context, _articles[index]);
                       },
                     ),
                   ),
@@ -172,24 +122,29 @@ class _NewsScreenState extends State<NewsScreen> {
     );
   }
 
-  Widget _buildSentimentIndicator() {
+  Widget _buildSentimentIndicator(BuildContext context) {
+    final theme = Theme.of(context);
+    final cardColor = theme.cardTheme.color;
+    final borderColor = theme.dividerTheme.color ?? Colors.transparent;
+    final subtleText = theme.textTheme.bodySmall?.color;
+
     if (_sentimentData == null || _sentimentData!['error'] != null) {
       return Container(
         margin: const EdgeInsets.all(16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF0B1220),
+          color: cardColor,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
+          border: Border.all(color: borderColor),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.sentiment_neutral, color: Colors.white54),
+            Icon(Icons.sentiment_neutral, color: subtleText),
             const SizedBox(width: 12),
             Text(
               _sentimentData?['error'] ?? 'Market sentiment unavailable',
-              style: const TextStyle(color: Colors.white54),
+              style: TextStyle(color: subtleText),
             ),
           ],
         ),
@@ -220,24 +175,18 @@ class _NewsScreenState extends State<NewsScreen> {
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF0B1220),
+        color: cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Market Sentiment',
-                style: TextStyle(color: Colors.white54, fontSize: 14),
-              ),
+              Text('Market Sentiment', style: TextStyle(color: subtleText, fontSize: 14)),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 4,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
                   color: sentimentColor.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
@@ -249,11 +198,7 @@ class _NewsScreenState extends State<NewsScreen> {
                     const SizedBox(width: 4),
                     Text(
                       sentiment.toUpperCase(),
-                      style: TextStyle(
-                        color: sentimentColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: sentimentColor, fontWeight: FontWeight.bold, fontSize: 12),
                     ),
                   ],
                 ),
@@ -264,11 +209,7 @@ class _NewsScreenState extends State<NewsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildSentimentStat(
-                'Total Articles',
-                '$totalArticles',
-                Colors.white54,
-              ),
+              _buildSentimentStat('Total Articles', '$totalArticles', subtleText ?? Colors.grey),
               _buildSentimentStat('Bullish', '$bullish', Colors.green),
               _buildSentimentStat('Bearish', '$bearish', Colors.red),
               _buildSentimentStat('Neutral', '$neutral', Colors.grey),
@@ -276,11 +217,9 @@ class _NewsScreenState extends State<NewsScreen> {
           ),
           const SizedBox(height: 8),
           LinearProgressIndicator(
-            value: (score + 1) / 2, // Normalize from -1..1 to 0..1
+            value: (score + 1) / 2,
             backgroundColor: Colors.white10,
-            valueColor: AlwaysStoppedAnimation<Color>(
-              score > 0 ? Colors.green : Colors.red,
-            ),
+            valueColor: AlwaysStoppedAnimation<Color>(score > 0 ? Colors.green : Colors.red),
             minHeight: 4,
             borderRadius: BorderRadius.circular(2),
           ),
@@ -292,30 +231,23 @@ class _NewsScreenState extends State<NewsScreen> {
   Widget _buildSentimentStat(String label, String value, Color color) {
     return Column(
       children: [
-        Text(
-          value,
-          style: TextStyle(
-            color: color,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
-        ),
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white54, fontSize: 10),
-        ),
+        Text(value, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(label, style: TextStyle(color: color.withOpacity(0.7), fontSize: 10)),
       ],
     );
   }
 
-  Widget _buildCurrencyFilter() {
+  Widget _buildCurrencyFilter(BuildContext context) {
+    final theme = Theme.of(context);
+    final cardColor = theme.cardTheme.color;
+    final borderColor = theme.dividerTheme.color ?? Colors.transparent;
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: _currencies.map((currency) {
-          final isSelected =
-              _selectedCurrency == currency ||
+          final isSelected = _selectedCurrency == currency ||
               (_selectedCurrency == null && currency == 'All');
           return Padding(
             padding: const EdgeInsets.only(right: 8),
@@ -329,15 +261,13 @@ class _NewsScreenState extends State<NewsScreen> {
                 });
                 _loadNews();
               },
-              backgroundColor: const Color(0xFF0B1220),
+              backgroundColor: cardColor,
               selectedColor: const Color(0xFF22C55E).withOpacity(0.2),
               labelStyle: TextStyle(
-                color: isSelected ? const Color(0xFF22C55E) : Colors.white54,
+                color: isSelected ? const Color(0xFF22C55E) : theme.textTheme.bodySmall?.color,
               ),
               side: BorderSide(
-                color: isSelected
-                    ? const Color(0xFF22C55E)
-                    : Colors.white.withOpacity(0.1),
+                color: isSelected ? const Color(0xFF22C55E) : borderColor,
               ),
             ),
           );
@@ -346,12 +276,15 @@ class _NewsScreenState extends State<NewsScreen> {
     );
   }
 
-  Widget _buildNewsCard(NewsArticle article) {
-    final isPositive =
-        article.sentiment == NewsSentiment.bullish ||
+  Widget _buildNewsCard(BuildContext context, NewsArticle article) {
+    final theme = Theme.of(context);
+    final cardColor = theme.cardTheme.color;
+    final borderColor = theme.dividerTheme.color ?? Colors.transparent;
+    final subtleText = theme.textTheme.bodySmall?.color;
+
+    final isPositive = article.sentiment == NewsSentiment.bullish ||
         article.sentiment == NewsSentiment.positive;
-    final isNegative =
-        article.sentiment == NewsSentiment.bearish ||
+    final isNegative = article.sentiment == NewsSentiment.bearish ||
         article.sentiment == NewsSentiment.negative;
 
     return GestureDetector(
@@ -360,20 +293,19 @@ class _NewsScreenState extends State<NewsScreen> {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFF0B1220),
+          color: cardColor,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isPositive
                 ? Colors.green.withOpacity(0.2)
                 : isNegative
                 ? Colors.red.withOpacity(0.2)
-                : Colors.white.withOpacity(0.05),
+                : borderColor,
           ),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image
             if (article.imageUrl != null)
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
@@ -385,43 +317,31 @@ class _NewsScreenState extends State<NewsScreen> {
                   errorBuilder: (c, e, s) => Container(
                     width: 80,
                     height: 80,
-                    color: Colors.white10,
-                    child: const Icon(Icons.image, color: Colors.white24),
+                    color: theme.dividerTheme.color,
+                    child: Icon(Icons.image, color: subtleText),
                   ),
                 ),
               ),
             const SizedBox(width: 12),
-            // Content
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Source and time
                   Row(
                     children: [
-                      Text(
-                        article.source,
-                        style: const TextStyle(
-                          color: Colors.white54,
-                          fontSize: 10,
-                        ),
-                      ),
+                      Text(article.source, style: TextStyle(color: subtleText, fontSize: 10)),
                       const Spacer(),
                       Text(
                         _formatTimeAgo(article.publishedAt),
-                        style: const TextStyle(
-                          color: Colors.white38,
-                          fontSize: 10,
-                        ),
+                        style: TextStyle(color: subtleText?.withOpacity(0.6), fontSize: 10),
                       ),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  // Title
                   Text(
                     article.title,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: theme.textTheme.bodyLarge?.color,
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
                     ),
@@ -429,15 +349,11 @@ class _NewsScreenState extends State<NewsScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 8),
-                  // Tags and sentiment
                   Row(
                     children: [
                       if (article.coinSymbol != null)
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
                             color: const Color(0xFF22C55E).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
@@ -454,10 +370,7 @@ class _NewsScreenState extends State<NewsScreen> {
                       if (article.coinSymbol != null) const SizedBox(width: 8),
                       if (article.sentiment != null)
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
                             color: article.sentiment!.color.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(8),
@@ -465,11 +378,7 @@ class _NewsScreenState extends State<NewsScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
-                                article.sentiment!.icon,
-                                color: article.sentiment!.color,
-                                size: 12,
-                              ),
+                              Icon(article.sentiment!.icon, color: article.sentiment!.color, size: 12),
                               const SizedBox(width: 4),
                               Text(
                                 article.sentiment!.displayName,
@@ -493,22 +402,19 @@ class _NewsScreenState extends State<NewsScreen> {
     );
   }
 
-  Widget _buildLoadMore() {
+  Widget _buildLoadMore(BuildContext context) {
     if (!_hasMore) return const SizedBox.shrink();
-
+    final borderColor = Theme.of(context).dividerTheme.color ?? Colors.transparent;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: _isLoadingMore
             ? const CircularProgressIndicator(color: Color(0xFF22C55E))
             : OutlinedButton(
-                onPressed: () {
-                  _currentPage++;
-                  _loadNews(loadMore: true);
-                },
+                onPressed: () { _currentPage++; _loadNews(loadMore: true); },
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: BorderSide(color: Colors.white.withOpacity(0.1)),
+                  foregroundColor: Theme.of(context).textTheme.bodyLarge?.color,
+                  side: BorderSide(color: borderColor),
                 ),
                 child: const Text('Load More'),
               ),
@@ -516,18 +422,24 @@ class _NewsScreenState extends State<NewsScreen> {
     );
   }
 
-  Widget _buildErrorWidget() {
+  Widget _buildErrorWidget(BuildContext context) {
+    final theme = Theme.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 60, color: Colors.white24),
+            Icon(Icons.error_outline, size: 60, color: theme.textTheme.bodySmall?.color?.withOpacity(0.4)),
             const SizedBox(height: 16),
             Text(
-              _error ?? 'Something went wrong',
-              style: const TextStyle(color: Colors.white54, fontSize: 16),
+              'Unable to load news.',
+              style: TextStyle(color: theme.textTheme.bodyLarge?.color, fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Check your internet connection and tap Try Again.',
+              style: TextStyle(color: theme.textTheme.bodySmall?.color, fontSize: 14),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -545,22 +457,17 @@ class _NewsScreenState extends State<NewsScreen> {
     );
   }
 
-  Widget _buildEmptyWidget() {
-    return const Center(
+  Widget _buildEmptyWidget(BuildContext context) {
+    final subtleText = Theme.of(context).textTheme.bodySmall?.color;
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.newspaper, size: 60, color: Colors.white24),
-          SizedBox(height: 16),
-          Text(
-            'No news available',
-            style: TextStyle(color: Colors.white54, fontSize: 16),
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Check back later for updates',
-            style: TextStyle(color: Colors.white38, fontSize: 14),
-          ),
+          Icon(Icons.newspaper, size: 60, color: subtleText?.withOpacity(0.3)),
+          const SizedBox(height: 16),
+          Text('No news available', style: TextStyle(color: subtleText, fontSize: 16)),
+          const SizedBox(height: 8),
+          Text('Check back later for updates', style: TextStyle(color: subtleText?.withOpacity(0.6), fontSize: 14)),
         ],
       ),
     );
@@ -569,17 +476,10 @@ class _NewsScreenState extends State<NewsScreen> {
   String _formatTimeAgo(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
-
-    if (difference.inMinutes < 1) {
-      return 'Just now';
-    } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ago';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays}d ago';
-    } else {
-      return '${difference.inDays ~/ 7}w ago';
-    }
+    if (difference.inMinutes < 1) return 'Just now';
+    if (difference.inMinutes < 60) return '${difference.inMinutes}m ago';
+    if (difference.inHours < 24) return '${difference.inHours}h ago';
+    if (difference.inDays < 7) return '${difference.inDays}d ago';
+    return '${difference.inDays ~/ 7}w ago';
   }
 }

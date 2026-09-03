@@ -61,7 +61,6 @@ class PortfolioPerformanceService {
     double totalInvested = 0.0;
     double totalCoinsValue = 0.0;
 
-    // Start from the beginning
     var currentIndex = 0;
     for (var date in dates) {
       // Process all transactions up to this date

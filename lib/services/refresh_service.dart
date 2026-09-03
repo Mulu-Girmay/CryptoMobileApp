@@ -10,7 +10,7 @@ class RefreshService {
   Timer? _timer;
   bool _isRunning = false;
   int _intervalSeconds = 30; // Default 30 seconds
-  List<VoidCallback> _listeners = [];
+  final List<VoidCallback> _listeners = [];
 
   void addListener(VoidCallback listener) {
     _listeners.add(listener);

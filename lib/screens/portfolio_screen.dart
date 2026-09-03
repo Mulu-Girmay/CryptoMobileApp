@@ -35,26 +35,20 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
 
   Future<void> _loadPortfolio() async {
     setState(() => _isLoading = true);
-
     try {
       final items = await PortfolioStorage.loadPortfolio();
       final coins = await fetchCoins('usd');
-
       setState(() {
         _portfolioItems = items;
         _coins = coins;
         _isLoading = false;
       });
-
       await _calculatePortfolioSummary();
-
       if (_portfolioItems.isNotEmpty && _coins.isNotEmpty) {
         await _loadPerformanceData();
       }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
       _showError('Failed to load portfolio: $e');
     }
   }
@@ -63,18 +57,13 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
     try {
       final transactions = await TransactionStorage.loadTransactions();
       final calculator = PortfolioCalculatorService();
-
-      // Calculate cash balance
       _cashBalance = await calculator.getCashBalance(
         transactions: transactions,
         initialCash: 0.0,
       );
-
-      // Calculate holdings value and profit
       double holdingsValue = 0.0;
       double totalProfit = 0.0;
       double totalInvested = 0.0;
-
       for (final item in _portfolioItems) {
         final coin = _coins.firstWhere(
           (c) => c.id == item.coinId,
@@ -91,13 +80,10 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
             low24h: 0,
           ),
         );
-
-        final currentValue = item.calculateCurrentValue(coin.price);
-        holdingsValue += currentValue;
+        holdingsValue += item.calculateCurrentValue(coin.price);
         totalProfit += item.calculateProfit(coin.price);
         totalInvested += item.purchaseValue;
       }
-
       setState(() {
         _holdingsValue = holdingsValue;
         _totalProfit = totalProfit;
@@ -111,9 +97,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
 
   Future<void> _loadPerformanceData() async {
     if (_portfolioItems.isEmpty || _coins.isEmpty) return;
-
     setState(() => _isLoadingPerformance = true);
-
     try {
       final service = PortfolioPerformanceService();
       final transactions = await TransactionStorage.loadTransactions();
@@ -121,7 +105,6 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
         transactions: transactions,
         coins: _coins,
       );
-
       setState(() {
         _performanceData = performance;
         _isLoadingPerformance = false;
@@ -136,11 +119,10 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
     final amountController = TextEditingController();
     final priceController = TextEditingController();
 
-    final result = await showDialog<bool>(
+    await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF0B1220),
         title: Row(
           children: [
             ClipRRect(
@@ -154,7 +136,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
               ),
             ),
             const SizedBox(width: 12),
-            Text(coin.name, style: const TextStyle(color: Colors.white)),
+            Text(coin.name),
           ],
         ),
         content: Column(
@@ -162,33 +144,16 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
           children: [
             TextField(
               controller: amountController,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                labelText: 'Amount of coins',
-                labelStyle: TextStyle(color: Colors.white54),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFF22C55E)),
-                ),
-              ),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'Amount of coins'),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: priceController,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              style: const TextStyle(color: Colors.white),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
                 labelText: 'Purchase price per coin',
-                labelStyle: const TextStyle(color: Colors.white54),
-                enabledBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFF22C55E)),
-                ),
                 hintText: '\$${coin.price.toStringAsFixed(2)}',
-                hintStyle: const TextStyle(color: Colors.white38),
               ),
             ),
           ],
@@ -196,23 +161,17 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Colors.white54),
-            ),
+            child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
               final amount = double.tryParse(amountController.text);
               final price = double.tryParse(priceController.text) ?? coin.price;
-
               if (amount == null || amount <= 0) {
                 _showError('Please enter a valid amount');
                 return;
               }
-
               Navigator.pop(context, true);
-
               final newItem = PortfolioItem(
                 coinId: coin.id,
                 coinName: coin.name,
@@ -222,10 +181,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                 purchasePrice: price,
                 purchaseDate: DateTime.now(),
               );
-
-              setState(() {
-                _portfolioItems.add(newItem);
-              });
+              setState(() => _portfolioItems.add(newItem));
               _savePortfolio();
               _calculatePortfolioSummary();
               _loadPerformanceData();
@@ -244,22 +200,14 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF0B1220),
-        title: const Text(
-          'Remove from Portfolio',
-          style: TextStyle(color: Colors.white),
-        ),
+        title: const Text('Remove from Portfolio'),
         content: Text(
           'Remove ${_portfolioItems[index].coinName} from your portfolio?',
-          style: const TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Colors.white54),
-            ),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -268,11 +216,8 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
         ],
       ),
     );
-
     if (confirm == true) {
-      setState(() {
-        _portfolioItems.removeAt(index);
-      });
+      setState(() => _portfolioItems.removeAt(index));
       _savePortfolio();
       _calculatePortfolioSummary();
       _loadPerformanceData();
@@ -301,8 +246,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
     final selectedCoin = await showDialog<Coin>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF0B1220),
-        title: const Text('Select Coin', style: TextStyle(color: Colors.white)),
+        title: const Text('Select Coin'),
         content: SizedBox(
           width: double.maxFinite,
           height: 400,
@@ -321,17 +265,9 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                         const Icon(Icons.image, size: 30, color: Colors.grey),
                   ),
                 ),
-                title: Text(
-                  coin.name,
-                  style: const TextStyle(color: Colors.white),
-                ),
-                subtitle: Text(
-                  Formatter.formatPrice(coin.price),
-                  style: const TextStyle(color: Colors.white54),
-                ),
+                title: Text(coin.name),
+                subtitle: Text(Formatter.formatPrice(coin.price)),
                 onTap: () => Navigator.pop(context, coin),
-                tileColor: Colors.transparent,
-                hoverColor: Colors.white.withOpacity(0.05),
               );
             },
           ),
@@ -339,10 +275,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, null),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Colors.white54),
-            ),
+            child: const Text('Cancel'),
           ),
         ],
       ),
@@ -361,30 +294,26 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
           purchaseDate: DateTime.now(),
         ),
       );
-
       if (existing.coinId.isNotEmpty) {
-        _showError('${selectedCoin.name} is already in your portfolio');
+        _showError('${selectedCoin.name} is already in your portfolio. Remove it first to add a new entry.');
         return;
       }
-
       await _addToPortfolio(selectedCoin);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cardColor = theme.cardTheme.color;
+    final dividerColor = theme.dividerTheme.color ?? Colors.transparent;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF020617),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Portfolio'),
-        backgroundColor: const Color(0xFF0F172A),
-        foregroundColor: Colors.white,
-        elevation: 0,
         actions: [
-          IconButton(
-            onPressed: _loadPortfolio,
-            icon: const Icon(Icons.refresh),
-          ),
+          IconButton(onPressed: _loadPortfolio, icon: const Icon(Icons.refresh)),
         ],
       ),
       body: _isLoading
@@ -399,20 +328,19 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0B1220),
+                      color: cardColor,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white.withOpacity(0.05)),
+                      border: Border.all(color: dividerColor),
                     ),
                     child: Column(
                       children: [
-                        // Total Value
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
+                            Text(
                               'Total Value',
                               style: TextStyle(
-                                color: Colors.white54,
+                                color: theme.textTheme.bodySmall?.color,
                                 fontSize: 14,
                               ),
                             ),
@@ -427,24 +355,23 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        // Holdings and Cash breakdown
                         Row(
                           children: [
                             Expanded(
                               child: Column(
                                 children: [
-                                  const Text(
+                                  Text(
                                     'Holdings',
                                     style: TextStyle(
-                                      color: Colors.white54,
+                                      color: theme.textTheme.bodySmall?.color,
                                       fontSize: 12,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     Formatter.formatPrice(_holdingsValue),
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style: TextStyle(
+                                      color: theme.textTheme.bodyLarge?.color,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -454,15 +381,15 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                             Container(
                               width: 1,
                               height: 30,
-                              color: Colors.white.withOpacity(0.1),
+                              color: dividerColor,
                             ),
                             Expanded(
                               child: Column(
                                 children: [
-                                  const Text(
+                                  Text(
                                     'Cash Balance',
                                     style: TextStyle(
-                                      color: Colors.white54,
+                                      color: theme.textTheme.bodySmall?.color,
                                       fontSize: 12,
                                     ),
                                   ),
@@ -471,7 +398,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                                     Formatter.formatPrice(_cashBalance),
                                     style: TextStyle(
                                       color: _cashBalance >= 0
-                                          ? Colors.white
+                                          ? theme.textTheme.bodyLarge?.color
                                           : Colors.red,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -482,14 +409,13 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        // Total P&L
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
+                            Text(
                               'Total P&L',
                               style: TextStyle(
-                                color: Colors.white54,
+                                color: theme.textTheme.bodySmall?.color,
                                 fontSize: 14,
                               ),
                             ),
@@ -506,21 +432,20 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        // Assets count
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
+                            Text(
                               'Assets',
                               style: TextStyle(
-                                color: Colors.white54,
+                                color: theme.textTheme.bodySmall?.color,
                                 fontSize: 14,
                               ),
                             ),
                             Text(
                               '${_portfolioItems.length} coins',
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: theme.textTheme.bodyLarge?.color,
                                 fontSize: 16,
                               ),
                             ),
@@ -537,7 +462,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                     Container(
                       height: 300,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0B1220),
+                        color: cardColor,
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: const Center(
@@ -555,7 +480,6 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
 
                   const SizedBox(height: 16),
 
-                  // Add Coin Button
                   ElevatedButton.icon(
                     onPressed: _showAddCoinDialog,
                     style: ElevatedButton.styleFrom(
@@ -577,26 +501,31 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
 
                   const SizedBox(height: 16),
 
-                  // Portfolio List
                   _portfolioItems.isEmpty
-                      ? const Center(
+                      ? Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
                                 Icons.account_balance_wallet,
                                 size: 80,
-                                color: Colors.white24,
+                                color: theme.textTheme.bodySmall?.color
+                                    ?.withOpacity(0.3),
                               ),
-                              SizedBox(height: 16),
+                              const SizedBox(height: 16),
                               Text(
                                 'No coins in portfolio',
-                                style: TextStyle(color: Colors.white54),
+                                style: TextStyle(
+                                  color: theme.textTheme.bodySmall?.color,
+                                ),
                               ),
-                              SizedBox(height: 8),
+                              const SizedBox(height: 8),
                               Text(
                                 'Add your first coin!',
-                                style: TextStyle(color: Colors.white38),
+                                style: TextStyle(
+                                  color: theme.textTheme.bodySmall?.color
+                                      ?.withOpacity(0.6),
+                                ),
                               ),
                             ],
                           ),
@@ -622,20 +551,13 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                                 low24h: 0,
                               ),
                             );
-
-                            final currentValue = item.calculateCurrentValue(
-                              coin.price,
-                            );
-                            final profit = item.calculateProfit(coin.price);
-                            final profitPercentage = item
-                                .calculateProfitPercentage(coin.price);
-
                             return _buildPortfolioCard(
                               item: item,
                               coin: coin,
-                              currentValue: currentValue,
-                              profit: profit,
-                              profitPercentage: profitPercentage,
+                              currentValue: item.calculateCurrentValue(coin.price),
+                              profit: item.calculateProfit(coin.price),
+                              profitPercentage:
+                                  item.calculateProfitPercentage(coin.price),
                               index: index,
                             );
                           },
@@ -655,14 +577,17 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
     required int index,
   }) {
     final isPositive = profit >= 0;
+    final theme = Theme.of(context);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF0B1220),
+        color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(
+          color: theme.dividerTheme.color ?? Colors.transparent,
+        ),
       ),
       child: Row(
         children: [
@@ -685,8 +610,8 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                   children: [
                     Text(
                       item.coinName,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: theme.textTheme.bodyLarge?.color,
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
@@ -698,13 +623,13 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
+                        color: theme.dividerTheme.color,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         item.amount.toStringAsFixed(4),
-                        style: const TextStyle(
-                          color: Colors.white54,
+                        style: TextStyle(
+                          color: theme.textTheme.bodySmall?.color,
                           fontSize: 12,
                         ),
                       ),
@@ -714,7 +639,10 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                 const SizedBox(height: 4),
                 Text(
                   Formatter.formatPrice(coin.price),
-                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                  style: TextStyle(
+                    color: theme.textTheme.bodySmall?.color,
+                    fontSize: 14,
+                  ),
                 ),
               ],
             ),
@@ -724,8 +652,8 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
             children: [
               Text(
                 Formatter.formatPrice(currentValue),
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: theme.textTheme.bodyLarge?.color,
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),

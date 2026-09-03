@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../model/alert.dart';
 import '../model/coin.dart';
 import '../services/alert_service.dart';
-import '../services/notification_service.dart';
 import '../utils/formatter.dart';
 
 class AlertScreen extends StatefulWidget {
@@ -33,11 +32,8 @@ class _AlertScreenState extends State<AlertScreen> {
   }
 
   Future<void> _addAlert() async {
-    // First, show coin selection
     final selectedCoin = await _showCoinSelectionDialog();
     if (selectedCoin == null) return;
-
-    // Then, show price and condition selection
     final alertData = await _showAlertSetupDialog(selectedCoin);
     if (alertData == null) return;
 
@@ -54,9 +50,7 @@ class _AlertScreenState extends State<AlertScreen> {
     );
 
     await _alertService.addAlert(newAlert);
-    setState(() {
-      _alerts = _alertService.getAlerts();
-    });
+    setState(() => _alerts = _alertService.getAlerts());
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -67,13 +61,23 @@ class _AlertScreenState extends State<AlertScreen> {
   }
 
   Future<Coin?> _showCoinSelectionDialog() async {
-    final coins = await fetchCoins('usd');
-
+    List<Coin> coins;
+    try {
+      coins = await fetchCoins('usd');
+    } catch (_) {
+      if (!mounted) return null;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to load coins. Check your connection and try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return null;
+    }
     return showDialog<Coin>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF0B1220),
-        title: const Text('Select Coin', style: TextStyle(color: Colors.white)),
+        title: const Text('Select Coin'),
         content: SizedBox(
           width: double.maxFinite,
           height: 400,
@@ -92,17 +96,9 @@ class _AlertScreenState extends State<AlertScreen> {
                         const Icon(Icons.image, size: 30),
                   ),
                 ),
-                title: Text(
-                  coin.name,
-                  style: const TextStyle(color: Colors.white),
-                ),
-                subtitle: Text(
-                  Formatter.formatPrice(coin.price),
-                  style: const TextStyle(color: Colors.white54),
-                ),
+                title: Text(coin.name),
+                subtitle: Text(Formatter.formatPrice(coin.price)),
                 onTap: () => Navigator.pop(context, coin),
-                tileColor: Colors.transparent,
-                hoverColor: Colors.white.withOpacity(0.05),
               );
             },
           ),
@@ -110,10 +106,7 @@ class _AlertScreenState extends State<AlertScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, null),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Colors.white54),
-            ),
+            child: const Text('Cancel'),
           ),
         ],
       ),
@@ -130,7 +123,6 @@ class _AlertScreenState extends State<AlertScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF0B1220),
         title: Row(
           children: [
             ClipRRect(
@@ -139,85 +131,53 @@ class _AlertScreenState extends State<AlertScreen> {
                 coin.image,
                 width: 30,
                 height: 30,
-                errorBuilder: (c, e, s) => const Icon(Icons.image, size: 30),
+                errorBuilder: (c, e, s) =>
+                    const Icon(Icons.image, size: 30),
               ),
             ),
             const SizedBox(width: 12),
-            Text(
-              'Set Alert: ${coin.name}',
-              style: const TextStyle(color: Colors.white),
-            ),
+            Text('Set Alert: ${coin.name}'),
           ],
         ),
         content: StatefulBuilder(
-          builder: (context, setState) {
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Condition dropdown
-                DropdownButtonFormField<AlertCondition>(
-                  value: selectedCondition,
-                  dropdownColor: const Color(0xFF0B1220),
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(
-                    labelText: 'Condition',
-                    labelStyle: TextStyle(color: Colors.white54),
-                    enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: Color(0xFF22C55E)),
-                    ),
+          builder: (context, setState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<AlertCondition>(
+                initialValue: selectedCondition,
+                decoration: const InputDecoration(labelText: 'Condition'),
+                items: const [
+                  DropdownMenuItem(
+                    value: AlertCondition.above,
+                    child: Text('Price goes above'),
                   ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: AlertCondition.above,
-                      child: Text(
-                        'Price goes above',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: AlertCondition.below,
-                      child: Text(
-                        'Price goes below',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      selectedCondition = value;
-                    });
-                  },
+                  DropdownMenuItem(
+                    value: AlertCondition.below,
+                    child: Text('Price goes below'),
+                  ),
+                ],
+                onChanged: (value) =>
+                    setState(() => selectedCondition = value),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: priceController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
                 ),
-                const SizedBox(height: 16),
-                // Price input
-                TextField(
-                  controller: priceController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    labelText: 'Target Price',
-                    labelStyle: const TextStyle(color: Colors.white54),
-                    enabledBorder: const UnderlineInputBorder(
-                      borderSide: BorderSide(color: Color(0xFF22C55E)),
-                    ),
-                    hintText: '\$${coin.price.toStringAsFixed(2)}',
-                    hintStyle: const TextStyle(color: Colors.white38),
-                    prefixText: '\$',
-                  ),
+                decoration: InputDecoration(
+                  labelText: 'Target Price',
+                  hintText: '\$${coin.price.toStringAsFixed(2)}',
+                  prefixText: '\$',
                 ),
-              ],
-            );
-          },
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, null),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Colors.white54),
-            ),
+            child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -251,13 +211,14 @@ class _AlertScreenState extends State<AlertScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cardColor = theme.cardTheme.color;
+    final dividerColor = theme.dividerTheme.color ?? Colors.transparent;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF020617),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Price Alerts'),
-        backgroundColor: const Color(0xFF0F172A),
-        foregroundColor: Colors.white,
-        elevation: 0,
         actions: [
           IconButton(onPressed: _loadAlerts, icon: const Icon(Icons.refresh)),
         ],
@@ -273,9 +234,9 @@ class _AlertScreenState extends State<AlertScreen> {
                   margin: const EdgeInsets.all(16),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0B1220),
+                    color: cardColor,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withOpacity(0.05)),
+                    border: Border.all(color: dividerColor),
                   ),
                   child: Row(
                     children: [
@@ -289,17 +250,17 @@ class _AlertScreenState extends State<AlertScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Price Alerts',
                               style: TextStyle(
-                                color: Colors.white,
+                                color: theme.textTheme.bodyLarge?.color,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             Text(
                               'Get notified when coins reach your target price',
                               style: TextStyle(
-                                color: Colors.white54,
+                                color: theme.textTheme.bodySmall?.color,
                                 fontSize: 12,
                               ),
                             ),
@@ -327,7 +288,6 @@ class _AlertScreenState extends State<AlertScreen> {
                   ),
                 ),
 
-                // Add Alert Button
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: ElevatedButton.icon(
@@ -352,27 +312,32 @@ class _AlertScreenState extends State<AlertScreen> {
 
                 const SizedBox(height: 16),
 
-                // Alerts List
                 Expanded(
                   child: _alerts.isEmpty
-                      ? const Center(
+                      ? Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
                                 Icons.notifications_off,
                                 size: 80,
-                                color: Colors.white24,
+                                color: theme.textTheme.bodySmall?.color
+                                    ?.withOpacity(0.3),
                               ),
-                              SizedBox(height: 16),
+                              const SizedBox(height: 16),
                               Text(
                                 'No alerts set',
-                                style: TextStyle(color: Colors.white54),
+                                style: TextStyle(
+                                  color: theme.textTheme.bodySmall?.color,
+                                ),
                               ),
-                              SizedBox(height: 8),
+                              const SizedBox(height: 8),
                               Text(
                                 'Create your first price alert',
-                                style: TextStyle(color: Colors.white38),
+                                style: TextStyle(
+                                  color: theme.textTheme.bodySmall?.color
+                                      ?.withOpacity(0.6),
+                                ),
                               ),
                             ],
                           ),
@@ -380,10 +345,8 @@ class _AlertScreenState extends State<AlertScreen> {
                       : ListView.builder(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           itemCount: _alerts.length,
-                          itemBuilder: (context, index) {
-                            final alert = _alerts[index];
-                            return _buildAlertCard(alert);
-                          },
+                          itemBuilder: (context, index) =>
+                              _buildAlertCard(_alerts[index], theme),
                         ),
                 ),
               ],
@@ -391,16 +354,16 @@ class _AlertScreenState extends State<AlertScreen> {
     );
   }
 
-  Widget _buildAlertCard(PriceAlert alert) {
+  Widget _buildAlertCard(PriceAlert alert, ThemeData theme) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF0B1220),
+        color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: alert.isActive
-              ? Colors.white.withOpacity(0.05)
+              ? theme.dividerTheme.color ?? Colors.transparent
               : Colors.red.withOpacity(0.3),
         ),
         gradient: alert.isActive
@@ -413,19 +376,17 @@ class _AlertScreenState extends State<AlertScreen> {
       ),
       child: Row(
         children: [
-          // Coin Image
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: Image.network(
               alert.coinImage,
               width: 40,
               height: 40,
-              errorBuilder: (c, e, s) => const Icon(Icons.image, size: 40),
+              errorBuilder: (c, e, s) =>
+                  const Icon(Icons.image, size: 40),
             ),
           ),
           const SizedBox(width: 12),
-
-          // Alert Info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -434,8 +395,8 @@ class _AlertScreenState extends State<AlertScreen> {
                   children: [
                     Text(
                       alert.coinName,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: theme.textTheme.bodyLarge?.color,
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
@@ -475,18 +436,22 @@ class _AlertScreenState extends State<AlertScreen> {
                 const SizedBox(height: 4),
                 Text(
                   '\$${alert.targetPrice.toStringAsFixed(2)}',
-                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                  style: TextStyle(
+                    color: theme.textTheme.bodySmall?.color,
+                    fontSize: 14,
+                  ),
                 ),
                 if (alert.lastTriggeredAt != null)
                   Text(
                     'Last triggered: ${_formatTime(alert.lastTriggeredAt!)}',
-                    style: const TextStyle(color: Colors.white38, fontSize: 10),
+                    style: TextStyle(
+                      color: theme.textTheme.bodySmall?.color?.withOpacity(0.6),
+                      fontSize: 10,
+                    ),
                   ),
               ],
             ),
           ),
-
-          // Status and Actions
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -514,9 +479,7 @@ class _AlertScreenState extends State<AlertScreen> {
                   IconButton(
                     onPressed: () async {
                       await _alertService.toggleAlert(alert.id);
-                      setState(() {
-                        _alerts = _alertService.getAlerts();
-                      });
+                      setState(() => _alerts = _alertService.getAlerts());
                     },
                     icon: Icon(
                       alert.isActive ? Icons.pause : Icons.play_arrow,
@@ -532,22 +495,12 @@ class _AlertScreenState extends State<AlertScreen> {
                       final confirm = await showDialog<bool>(
                         context: context,
                         builder: (context) => AlertDialog(
-                          backgroundColor: const Color(0xFF0B1220),
-                          title: const Text(
-                            'Delete Alert',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          content: Text(
-                            'Delete alert for ${alert.coinName}?',
-                            style: const TextStyle(color: Colors.white70),
-                          ),
+                          title: const Text('Delete Alert'),
+                          content: Text('Delete alert for ${alert.coinName}?'),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(context, false),
-                              child: const Text(
-                                'Cancel',
-                                style: TextStyle(color: Colors.white54),
-                              ),
+                              child: const Text('Cancel'),
                             ),
                             TextButton(
                               onPressed: () => Navigator.pop(context, true),
@@ -559,12 +512,9 @@ class _AlertScreenState extends State<AlertScreen> {
                           ],
                         ),
                       );
-
                       if (confirm == true) {
                         await _alertService.removeAlert(alert.id);
-                        setState(() {
-                          _alerts = _alertService.getAlerts();
-                        });
+                        setState(() => _alerts = _alertService.getAlerts());
                       }
                     },
                     icon: const Icon(Icons.delete, color: Colors.red, size: 18),
@@ -581,12 +531,10 @@ class _AlertScreenState extends State<AlertScreen> {
   }
 
   String _formatTime(DateTime time) {
-    final now = DateTime.now();
-    final difference = now.difference(time);
-
-    if (difference.inMinutes < 1) return 'Just now';
-    if (difference.inMinutes < 60) return '${difference.inMinutes}m ago';
-    if (difference.inHours < 24) return '${difference.inHours}h ago';
-    return '${difference.inDays}d ago';
+    final diff = DateTime.now().difference(time);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
   }
 }

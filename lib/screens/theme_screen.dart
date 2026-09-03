@@ -72,24 +72,6 @@ class ThemeScreen extends StatelessWidget {
                             ],
                           ),
                         ),
-                        if (themeNotifier.isDarkMode)
-                          const Icon(
-                            Icons.dark_mode,
-                            color: AppTheme.primaryGreen,
-                            size: 24,
-                          )
-                        else if (themeNotifier.isLightMode)
-                          const Icon(
-                            Icons.light_mode,
-                            color: Colors.amber,
-                            size: 24,
-                          )
-                        else
-                          const Icon(
-                            Icons.settings_suggest,
-                            color: Colors.blue,
-                            size: 24,
-                          ),
                       ],
                     ),
                   ],
@@ -98,7 +80,6 @@ class ThemeScreen extends StatelessWidget {
 
               const SizedBox(height: 24),
 
-              // Theme options
               const Text(
                 'Choose Theme',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -111,7 +92,7 @@ class ThemeScreen extends StatelessWidget {
                 title: 'Dark Theme',
                 subtitle: 'Dark mode for night',
                 icon: Icons.dark_mode,
-                color: Colors.purple,
+                color: AppTheme.primaryGreen,
                 isSelected: themeNotifier.isDarkMode,
                 onTap: () => themeNotifier.setThemeMode(ThemeMode.dark),
               ),
@@ -124,7 +105,7 @@ class ThemeScreen extends StatelessWidget {
                 title: 'Light Theme',
                 subtitle: 'Light mode for day',
                 icon: Icons.light_mode,
-                color: Colors.amber,
+                color: AppTheme.primaryGreen,
                 isSelected: themeNotifier.isLightMode,
                 onTap: () => themeNotifier.setThemeMode(ThemeMode.light),
               ),
@@ -137,108 +118,9 @@ class ThemeScreen extends StatelessWidget {
                 title: 'System Default',
                 subtitle: 'Follow system theme',
                 icon: Icons.settings_suggest,
-                color: Colors.blue,
+                color: AppTheme.primaryGreen,
                 isSelected: themeNotifier.isSystemMode,
                 onTap: () => themeNotifier.setThemeMode(ThemeMode.system),
-              ),
-
-              const SizedBox(height: 32),
-
-              // Preview section
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardTheme.color,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color:
-                        Theme.of(context).dividerTheme.color ??
-                        Colors.transparent,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Preview',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primary,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text(
-                            'Primary',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).cardTheme.color,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color:
-                                  Theme.of(context).dividerTheme.color ??
-                                  Colors.transparent,
-                            ),
-                          ),
-                          child: const Text(
-                            'Card',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.error.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            'Error',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {},
-                            child: const Text('Elevated Button'),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () {},
-                            child: const Text('Outlined Button'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
               ),
             ],
           );

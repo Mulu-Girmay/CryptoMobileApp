@@ -66,9 +66,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
           .price;
       final toPrice = _coins.firstWhere((coin) => coin.name == toCoin).price;
 
-      await Future.delayed(
-        const Duration(milliseconds: 300),
-      ); // Simulate loading
+      await Future.delayed(const Duration(milliseconds: 300));
 
       final converted = Convert(amount, fromPrice, toPrice);
       setState(() {
@@ -98,12 +96,9 @@ class _ConverterScreenState extends State<ConverterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: true,
-      backgroundColor: const Color(0xFF020617),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Converter'),
-        backgroundColor: const Color(0xFF0F172A),
-        foregroundColor: Colors.white,
-        elevation: 0,
       ),
       body: FutureBuilder<List<Coin>>(
         future: _coinsFuture,
@@ -118,32 +113,62 @@ class _ConverterScreenState extends State<ConverterScreen> {
               !snapshot.hasData ||
               snapshot.data!.isEmpty) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, color: Colors.red, size: 60),
-                  const SizedBox(height: 16),
-                  Text(
-                    _errorMessage.isNotEmpty
-                        ? _errorMessage
-                        : 'No coins available',
-                    style: const TextStyle(color: Colors.white70),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.wifi_off_rounded,
+                        color: Colors.red,
+                        size: 48,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Unable to load coins',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Check your internet connection\nand try again.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey, fontSize: 14),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () => setState(() {
                         _coinsFuture = fetchCoins('usd');
                         _errorMessage = '';
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF22C55E),
+                      }),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF22C55E),
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text(
+                        'Try Again',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
-                    child: const Text('Retry'),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           }
@@ -173,13 +198,13 @@ class _ConverterScreenState extends State<ConverterScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0F172A),
+                        color: Theme.of(context).cardTheme.color,
                         borderRadius: BorderRadius.circular(50),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.05),
+                          color: Theme.of(context).dividerTheme.color ?? Colors.transparent,
                         ),
                       ),
-                      child: const Icon(Icons.swap_vert, color: Colors.white),
+                      child: Icon(Icons.swap_vert, color: Theme.of(context).iconTheme.color),
                     ),
                   ),
 
@@ -193,15 +218,19 @@ class _ConverterScreenState extends State<ConverterScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0B1220),
+                      color: Theme.of(context).cardTheme.color,
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: Colors.white.withOpacity(0.05)),
+                      border: Border.all(
+                        color: Theme.of(context).dividerTheme.color ?? Colors.transparent,
+                      ),
                     ),
                     child: Column(
                       children: [
-                        const Text(
-                          "Converted Amount",
-                          style: TextStyle(color: Colors.white54),
+                        Text(
+                          'Converted Amount',
+                          style: TextStyle(
+                            color: Theme.of(context).textTheme.bodySmall?.color,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         if (_isConverting)
@@ -248,19 +277,20 @@ class _ConverterScreenState extends State<ConverterScreen> {
   }
 
   Widget _buildInputCard(List<Coin> coins) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: _cardStyle(),
+      decoration: _cardStyle(context),
       child: Row(
         children: [
           Expanded(
             child: TextField(
               controller: _amountController,
               keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                hintText: "Amount",
-                hintStyle: TextStyle(color: Colors.white38),
+              style: TextStyle(color: theme.textTheme.bodyLarge?.color),
+              decoration: InputDecoration(
+                hintText: 'Amount',
+                hintStyle: TextStyle(color: theme.textTheme.bodySmall?.color),
                 border: InputBorder.none,
               ),
             ),
@@ -277,15 +307,19 @@ class _ConverterScreenState extends State<ConverterScreen> {
   }
 
   Widget _buildOutputCard(List<Coin> coins) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: _cardStyle(),
+      decoration: _cardStyle(context),
       child: Row(
         children: [
           Expanded(
             child: Text(
               _convertedAmount,
-              style: const TextStyle(color: Colors.white, fontSize: 18),
+              style: TextStyle(
+                color: theme.textTheme.bodyLarge?.color,
+                fontSize: 18,
+              ),
             ),
           ),
           _buildDropdown(coins, toCoin, (v) {
@@ -304,11 +338,12 @@ class _ConverterScreenState extends State<ConverterScreen> {
     String? value,
     ValueChanged<String?> onChanged,
   ) {
+    final theme = Theme.of(context);
     return DropdownButton<String>(
       value: value,
-      dropdownColor: const Color(0xFF0B1220),
-      hint: const Text("Select", style: TextStyle(color: Colors.white54)),
-      style: const TextStyle(color: Colors.white),
+      dropdownColor: theme.cardTheme.color,
+      hint: Text('Select', style: TextStyle(color: theme.textTheme.bodySmall?.color)),
+      style: TextStyle(color: theme.textTheme.bodyLarge?.color),
       underline: const SizedBox(),
       items: coins
           .map(
@@ -320,11 +355,14 @@ class _ConverterScreenState extends State<ConverterScreen> {
     );
   }
 
-  BoxDecoration _cardStyle() {
+  BoxDecoration _cardStyle(BuildContext context) {
+    final theme = Theme.of(context);
     return BoxDecoration(
-      color: const Color(0xFF0B1220),
+      color: theme.cardTheme.color,
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: Colors.white.withOpacity(0.05)),
+      border: Border.all(
+        color: theme.dividerTheme.color ?? Colors.transparent,
+      ),
     );
   }
 }

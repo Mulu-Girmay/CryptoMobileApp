@@ -9,9 +9,9 @@ import 'package:crypto/services/favorites_service.dart';
 import 'package:crypto/services/refresh_service.dart';
 import 'package:crypto/services/theme_notifier.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../screens/refresh_setting_screen.dart';
 import '../services/theme_service.dart';
-import '../screens/news_screen.dart';
 import '../screens/transaction_screen.dart';
 
 class MenuWidget extends StatefulWidget {
@@ -25,7 +25,6 @@ class _MenuWidgetState extends State<MenuWidget> {
   final FavoritesService _favoritesService = FavoritesService();
   final CurrencyService _currencyService = CurrencyService();
   final RefreshService _refreshService = RefreshService();
-  final ThemeNotifier _themeNotifier = ThemeNotifier();
   int _favoritesCount = 0;
 
   @override
@@ -36,9 +35,11 @@ class _MenuWidgetState extends State<MenuWidget> {
 
   Future<void> _loadFavoritesCount() async {
     await _favoritesService.loadFavorites();
-    setState(() {
-      _favoritesCount = _favoritesService.getFavorites().length;
-    });
+    if (mounted) {
+      setState(() {
+        _favoritesCount = _favoritesService.getFavorites().length;
+      });
+    }
   }
 
   void _openScreen(BuildContext context, Widget screen) {
@@ -58,15 +59,18 @@ class _MenuWidgetState extends State<MenuWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final themeNotifier = context.watch<ThemeNotifier>();
+    final theme = Theme.of(context);
+
     return Drawer(
       width: MediaQuery.sizeOf(context).width * 0.6,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: theme.scaffoldBackgroundColor,
       child: SafeArea(
         child: Container(
-          color: Theme.of(context).cardTheme.color,
+          color: theme.cardTheme.color,
           child: Column(
             children: [
-              // Header with profile
+              // Header
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -80,9 +84,7 @@ class _MenuWidgetState extends State<MenuWidget> {
                   ),
                   border: Border(
                     bottom: BorderSide(
-                      color:
-                          Theme.of(context).dividerTheme.color ??
-                          Colors.transparent,
+                      color: theme.dividerTheme.color ?? Colors.transparent,
                     ),
                   ),
                 ),
@@ -105,16 +107,18 @@ class _MenuWidgetState extends State<MenuWidget> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Crypto App',
-                            style: TextStyle(
-                              fontSize: 18,
+                            style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           Text(
                             '${_currencyService.selectedCurrency.flag} ${_currencyService.selectedCurrency.code.toUpperCase()}',
-                            style: TextStyle(color: Colors.grey, fontSize: 12),
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
@@ -128,41 +132,39 @@ class _MenuWidgetState extends State<MenuWidget> {
                 child: ListView(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   children: [
-                    // Section: Main
                     _buildSectionHeader('Main'),
-
                     _buildMenuItem(
+                      context: context,
+                      theme: theme,
                       icon: Icons.list,
                       title: 'Coin List',
                       subtitle: 'Browse all cryptocurrencies',
                       onTap: () => Navigator.of(context).pop(),
                       isActive: true,
                     ),
-                    
                     _buildMenuItem(
+                      context: context,
+                      theme: theme,
                       icon: Icons.equalizer,
                       title: 'Converter',
                       subtitle: 'Convert between currencies',
                       onTap: () =>
                           _openScreen(context, const ConverterScreen()),
                     ),
-
                     const Divider(height: 32),
-
-                    // Section: Portfolio
                     _buildSectionHeader('Portfolio'),
-
                     _buildMenuItem(
+                      context: context,
+                      theme: theme,
                       icon: Icons.account_balance_wallet,
                       title: 'Portfolio',
                       subtitle: 'Track your investments',
                       onTap: () =>
                           _openScreen(context, const PortfolioScreen()),
-                      showBadge: true,
-                      badgeText:
-                          '${_favoritesCount > 0 ? _favoritesCount : ''}',
                     ),
                     _buildMenuItem(
+                      context: context,
+                      theme: theme,
                       icon: Icons.receipt_long,
                       title: 'Transactions',
                       subtitle: 'View transaction history',
@@ -170,13 +172,16 @@ class _MenuWidgetState extends State<MenuWidget> {
                           _openScreen(context, const TransactionScreen()),
                     ),
                     _buildMenuItem(
+                      context: context,
+                      theme: theme,
                       icon: Icons.notifications_active,
                       title: 'Price Alerts',
                       subtitle: 'Get notified on price changes',
                       onTap: () => _openScreen(context, const AlertScreen()),
                     ),
-
                     _buildMenuItem(
+                      context: context,
+                      theme: theme,
                       icon: Icons.star,
                       title: 'Favorites',
                       subtitle: 'Your favorite coins',
@@ -186,13 +191,11 @@ class _MenuWidgetState extends State<MenuWidget> {
                       badgeText: _favoritesCount > 0 ? '$_favoritesCount' : '',
                       badgeColor: Colors.amber,
                     ),
-
                     const Divider(height: 32),
-
-                    // Section: Settings
                     _buildSectionHeader('Settings'),
-
                     _buildMenuItem(
+                      context: context,
+                      theme: theme,
                       icon: Icons.currency_exchange,
                       title: 'Currency',
                       subtitle:
@@ -204,13 +207,12 @@ class _MenuWidgetState extends State<MenuWidget> {
                             builder: (_) => const CurrencyScreen(),
                           ),
                         );
-                        if (result == true) {
-                          setState(() {});
-                        }
+                        if (result == true) setState(() {});
                       },
                     ),
-
                     _buildMenuItem(
+                      context: context,
+                      theme: theme,
                       icon: Icons.timer,
                       title: 'Refresh',
                       subtitle:
@@ -218,21 +220,21 @@ class _MenuWidgetState extends State<MenuWidget> {
                       onTap: () =>
                           _openScreen(context, const RefreshSettingsScreen()),
                     ),
-
                     _buildMenuItem(
+                      context: context,
+                      theme: theme,
                       icon: Icons.palette,
                       title: 'Theme',
-                      subtitle: '${_themeNotifier.getThemeModeName()} mode',
+                      subtitle: '${themeNotifier.getThemeModeName()} mode',
                       onTap: () => _openScreen(context, const ThemeScreen()),
                     ),
-
                     _buildMenuItem(
+                      context: context,
+                      theme: theme,
                       icon: Icons.info_outline,
                       title: 'About',
                       subtitle: 'Version 1.0.0',
-                      onTap: () {
-                        _showAboutDialog(context);
-                      },
+                      onTap: () => _showAboutDialog(context),
                     ),
                   ],
                 ),
@@ -244,9 +246,7 @@ class _MenuWidgetState extends State<MenuWidget> {
                 decoration: BoxDecoration(
                   border: Border(
                     top: BorderSide(
-                      color:
-                          Theme.of(context).dividerTheme.color ??
-                          Colors.transparent,
+                      color: theme.dividerTheme.color ?? Colors.transparent,
                     ),
                   ),
                 ),
@@ -257,26 +257,22 @@ class _MenuWidgetState extends State<MenuWidget> {
                       'Crypto App v1.0.0',
                       style: TextStyle(color: Colors.grey, fontSize: 10),
                     ),
-                    Row(
-                      children: [
-                        IconButton(
-                          onPressed: () {
-                            _loadFavoritesCount();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Refreshed!'),
-                                backgroundColor: AppTheme.primaryGreen,
-                                duration: Duration(seconds: 1),
-                              ),
-                            );
-                          },
-                          icon: Icon(
-                            Icons.refresh,
-                            color: Colors.grey,
-                            size: 18,
+                    IconButton(
+                      onPressed: () {
+                        _loadFavoritesCount();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Refreshed!'),
+                            backgroundColor: AppTheme.primaryGreen,
+                            duration: Duration(seconds: 1),
                           ),
-                        ),
-                      ],
+                        );
+                      },
+                      icon: const Icon(
+                        Icons.refresh,
+                        color: Colors.grey,
+                        size: 18,
+                      ),
                     ),
                   ],
                 ),
@@ -293,7 +289,7 @@ class _MenuWidgetState extends State<MenuWidget> {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: Text(
         title,
-        style: TextStyle(
+        style: const TextStyle(
           color: Colors.grey,
           fontSize: 11,
           fontWeight: FontWeight.w600,
@@ -304,6 +300,8 @@ class _MenuWidgetState extends State<MenuWidget> {
   }
 
   Widget _buildMenuItem({
+    required BuildContext context,
+    required ThemeData theme,
     required IconData icon,
     required String title,
     required String subtitle,
@@ -312,28 +310,29 @@ class _MenuWidgetState extends State<MenuWidget> {
     bool isFavorite = false,
     bool showBadge = false,
     String badgeText = '',
-    Color badgeColor = const Color(0xFF22C55E),
+    Color badgeColor = AppTheme.primaryGreen,
   }) {
+    final iconColor = isActive
+        ? AppTheme.primaryGreen
+        : isFavorite
+        ? Colors.amber
+        : theme.iconTheme.color?.withOpacity(0.6) ?? Colors.grey;
+
+    final titleColor =
+        isActive ? AppTheme.primaryGreen : theme.textTheme.bodyLarge?.color;
+
     return ListTile(
-      leading: Icon(
-        icon,
-        color: isActive
-            ? AppTheme.primaryGreen
-            : isFavorite
-            ? Colors.amber
-            : Colors.grey,
-        size: 22,
-      ),
+      leading: Icon(icon, color: iconColor, size: 22),
       title: Text(
         title,
         style: TextStyle(
-          color: isActive ? AppTheme.primaryGreen : null,
+          color: titleColor,
           fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
         ),
       ),
       subtitle: Text(
         subtitle,
-        style: TextStyle(color: Colors.grey, fontSize: 11),
+        style: const TextStyle(color: Colors.grey, fontSize: 11),
       ),
       trailing: showBadge && badgeText.isNotEmpty
           ? Container(
@@ -374,8 +373,7 @@ class _MenuWidgetState extends State<MenuWidget> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).dialogTheme.backgroundColor,
-        title: const Text('About Crypto App', style: TextStyle()),
+        title: const Text('About Crypto App'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,

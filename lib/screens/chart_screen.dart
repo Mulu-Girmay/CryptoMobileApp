@@ -16,10 +16,13 @@ class ChartScreen extends StatefulWidget {
 class _ChartScreenState extends State<ChartScreen> {
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cardColor = theme.cardTheme.color;
+    final borderColor = theme.dividerTheme.color ?? Colors.transparent;
     final isPositive = widget.coin.change >= 0;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF020617),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Row(
           children: [
@@ -39,24 +42,17 @@ class _ChartScreenState extends State<ChartScreen> {
               children: [
                 Text(
                   widget.coin.name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 Text(
                   widget.coin.symbol.toUpperCase(),
-                  style: const TextStyle(fontSize: 12, color: Colors.white54),
+                  style: TextStyle(fontSize: 12, color: theme.textTheme.bodySmall?.color),
                 ),
               ],
             ),
           ],
         ),
-        backgroundColor: const Color(0xFF0F172A),
-        foregroundColor: Colors.white,
-        elevation: 0,
         actions: [
-          // Current price
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Column(
@@ -65,16 +61,10 @@ class _ChartScreenState extends State<ChartScreen> {
               children: [
                 Text(
                   Formatter.formatPrice(widget.coin.price),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: isPositive
                         ? Colors.green.withOpacity(0.15)
@@ -100,7 +90,6 @@ class _ChartScreenState extends State<ChartScreen> {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              // Price Chart - Takes most of the space
               Expanded(
                 child: PriceChart(
                   coinId: widget.coin.id,
@@ -109,43 +98,25 @@ class _ChartScreenState extends State<ChartScreen> {
                   currentPrice: widget.coin.price,
                 ),
               ),
-
               const SizedBox(height: 16),
-
-              // Quick stats
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0B1220),
+                  color: cardColor,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                  border: Border.all(color: borderColor),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildQuickStat(
-                      'Market Cap',
-                      Formatter.formatLargeNumber(widget.coin.marketCap),
-                    ),
-                    _buildQuickStat(
-                      '24h Volume',
-                      Formatter.formatLargeNumber(widget.coin.totalVolume),
-                    ),
-                    _buildQuickStat(
-                      '24h High',
-                      Formatter.formatPrice(widget.coin.high24h),
-                    ),
-                    _buildQuickStat(
-                      '24h Low',
-                      Formatter.formatPrice(widget.coin.low24h),
-                    ),
+                    _buildQuickStat(context, 'Market Cap', Formatter.formatLargeNumber(widget.coin.marketCap)),
+                    _buildQuickStat(context, '24h Volume', Formatter.formatLargeNumber(widget.coin.totalVolume)),
+                    _buildQuickStat(context, '24h High', Formatter.formatPrice(widget.coin.high24h)),
+                    _buildQuickStat(context, '24h Low', Formatter.formatPrice(widget.coin.low24h)),
                   ],
                 ),
               ),
-
               const SizedBox(height: 16),
-
-              // Action buttons
               Row(
                 children: [
                   Expanded(
@@ -153,20 +124,16 @@ class _ChartScreenState extends State<ChartScreen> {
                       onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (_) => const ConverterScreen(),
-                          ),
+                          MaterialPageRoute(builder: (_) => const ConverterScreen()),
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0B1220),
-                        foregroundColor: Colors.white,
+                        backgroundColor: cardColor,
+                        foregroundColor: theme.textTheme.bodyLarge?.color,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(
-                            color: Colors.white.withOpacity(0.05),
-                          ),
+                          side: BorderSide(color: borderColor),
                         ),
                       ),
                       icon: const Icon(Icons.currency_exchange, size: 18),
@@ -177,7 +144,6 @@ class _ChartScreenState extends State<ChartScreen> {
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        // Add to portfolio
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Go to Portfolio to add this coin'),
@@ -189,9 +155,7 @@ class _ChartScreenState extends State<ChartScreen> {
                         backgroundColor: const Color(0xFF22C55E),
                         foregroundColor: Colors.black,
                         padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       icon: const Icon(Icons.add, size: 18),
                       label: const Text('Add to Portfolio'),
@@ -206,18 +170,16 @@ class _ChartScreenState extends State<ChartScreen> {
     );
   }
 
-  Widget _buildQuickStat(String label, String value) {
+  Widget _buildQuickStat(BuildContext context, String label, String value) {
+    final theme = Theme.of(context);
     return Column(
       children: [
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white54, fontSize: 10),
-        ),
+        Text(label, style: TextStyle(color: theme.textTheme.bodySmall?.color, fontSize: 10)),
         const SizedBox(height: 4),
         Text(
           value,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: theme.textTheme.bodyLarge?.color,
             fontSize: 12,
             fontWeight: FontWeight.w600,
           ),

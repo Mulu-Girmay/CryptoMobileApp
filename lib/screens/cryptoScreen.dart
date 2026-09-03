@@ -5,7 +5,8 @@ import '../services/currency_service.dart';
 import '../utils/formatter.dart';
 
 class CryptoScreen extends StatefulWidget {
-  const CryptoScreen({super.key});
+  final bool showOnlyFavorites;
+  const CryptoScreen({super.key, this.showOnlyFavorites = false});
 
   @override
   State<CryptoScreen> createState() => _CryptoScreenState();
@@ -17,11 +18,12 @@ class _CryptoScreenState extends State<CryptoScreen> {
   String searchQuery = '';
   double totalBalance = 0.0;
   bool isLoading = false;
-  bool showOnlyFavorites = false;
+  late bool showOnlyFavorites;
 
   @override
   void initState() {
     super.initState();
+    showOnlyFavorites = widget.showOnlyFavorites;
     _fetchTotalBalance();
   }
 
@@ -48,18 +50,17 @@ class _CryptoScreenState extends State<CryptoScreen> {
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() => isLoading = false);
-      }
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Removed nested Scaffold and SafeArea to prevent layout conflicts and overflows
-    return Container(
-      color: const Color(0xFF020617),
-      child: Padding(
+    final theme = Theme.of(context);
+    final cardColor = theme.cardTheme.color;
+    final dividerColor = theme.dividerTheme.color ?? Colors.transparent;
+
+    return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Column(
           children: [
@@ -69,18 +70,21 @@ class _CryptoScreenState extends State<CryptoScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: const Color(0xFF0B1220),
+                color: cardColor,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white.withOpacity(0.05)),
+                border: Border.all(color: dividerColor),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      const Text(
-                        "Total Balance",
-                        style: TextStyle(color: Colors.white54, fontSize: 14),
+                      Text(
+                        'Total Balance',
+                        style: TextStyle(
+                          color: theme.textTheme.bodySmall?.color,
+                          fontSize: 14,
+                        ),
                       ),
                       const Spacer(),
                       Container(
@@ -132,9 +136,9 @@ class _CryptoScreenState extends State<CryptoScreen> {
                         ),
                       IconButton(
                         onPressed: _fetchTotalBalance,
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.refresh,
-                          color: Colors.white54,
+                          color: theme.textTheme.bodySmall?.color,
                           size: 20,
                         ),
                       ),
@@ -153,26 +157,25 @@ class _CryptoScreenState extends State<CryptoScreen> {
                   child: Container(
                     height: 50,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0B1220),
+                      color: cardColor,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.05),
-                      ),
+                      border: Border.all(color: dividerColor),
                     ),
                     child: TextField(
                       controller: searchController,
-                      style: const TextStyle(color: Colors.white),
-                      onChanged: (value) {
-                        setState(() {
-                          searchQuery = value;
-                        });
-                      },
+                      style: TextStyle(
+                        color: theme.textTheme.bodyLarge?.color,
+                      ),
+                      onChanged: (value) => setState(() => searchQuery = value),
                       decoration: InputDecoration(
-                        hintText: "Search coins...",
-                        hintStyle: const TextStyle(color: Colors.white38, fontSize: 14),
-                        prefixIcon: const Icon(
+                        hintText: 'Search coins...',
+                        hintStyle: TextStyle(
+                          color: theme.textTheme.bodySmall?.color,
+                          fontSize: 14,
+                        ),
+                        prefixIcon: Icon(
                           Icons.search,
-                          color: Colors.white54,
+                          color: theme.textTheme.bodySmall?.color,
                           size: 20,
                         ),
                         border: InputBorder.none,
@@ -181,17 +184,15 @@ class _CryptoScreenState extends State<CryptoScreen> {
                         ),
                         suffixIcon: searchQuery.isNotEmpty
                             ? IconButton(
-                                icon: const Icon(
+                                icon: Icon(
                                   Icons.clear,
-                                  color: Colors.white54,
+                                  color: theme.textTheme.bodySmall?.color,
                                   size: 18,
                                 ),
-                                onPressed: () {
-                                  setState(() {
-                                    searchController.clear();
-                                    searchQuery = '';
-                                  });
-                                },
+                                onPressed: () => setState(() {
+                                  searchController.clear();
+                                  searchQuery = '';
+                                }),
                               )
                             : null,
                       ),
@@ -205,25 +206,20 @@ class _CryptoScreenState extends State<CryptoScreen> {
                   decoration: BoxDecoration(
                     color: showOnlyFavorites
                         ? const Color(0xFF22C55E).withOpacity(0.15)
-                        : const Color(0xFF0B1220),
+                        : cardColor,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
                       color: showOnlyFavorites
                           ? const Color(0xFF22C55E)
-                          : Colors.white.withOpacity(0.05),
+                          : dividerColor,
                     ),
                   ),
                   child: IconButton(
-                    onPressed: () {
-                      setState(() {
-                        showOnlyFavorites = !showOnlyFavorites;
-                      });
-                    },
+                    onPressed: () =>
+                        setState(() => showOnlyFavorites = !showOnlyFavorites),
                     icon: Icon(
                       showOnlyFavorites ? Icons.star : Icons.star_border,
-                      color: showOnlyFavorites
-                          ? Colors.amber
-                          : Colors.white54,
+                      color: showOnlyFavorites ? Colors.amber : Colors.grey,
                       size: 24,
                     ),
                   ),
@@ -240,9 +236,12 @@ class _CryptoScreenState extends State<CryptoScreen> {
                   children: [
                     const Icon(Icons.star, color: Colors.amber, size: 14),
                     const SizedBox(width: 4),
-                    const Text(
+                    Text(
                       'Showing favorites only',
-                      style: TextStyle(color: Colors.white54, fontSize: 11),
+                      style: TextStyle(
+                        color: theme.textTheme.bodySmall?.color,
+                        fontSize: 11,
+                      ),
                     ),
                     const Spacer(),
                     GestureDetector(
@@ -267,7 +266,6 @@ class _CryptoScreenState extends State<CryptoScreen> {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 }

@@ -18,6 +18,9 @@ class ReusableCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cardColor = theme.cardTheme.color;
+    final borderColor = theme.dividerTheme.color ?? Colors.transparent;
     final isPositive = coin.change >= 0;
     final formattedPrice = Formatter.formatPrice(coin.price);
 
@@ -27,12 +30,12 @@ class ReusableCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: const Color(0xFF0B1220),
+          color: cardColor,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: coin.isFavorite
                 ? Colors.amber.withOpacity(0.3)
-                : Colors.white.withOpacity(0.05),
+                : borderColor,
           ),
         ),
         child: LayoutBuilder(
@@ -67,8 +70,8 @@ class ReusableCard extends StatelessWidget {
                     coin.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: theme.textTheme.bodyLarge?.color,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                     ),
@@ -97,8 +100,8 @@ class ReusableCard extends StatelessWidget {
                     fit: BoxFit.scaleDown,
                     child: Text(
                       formattedPrice,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: theme.textTheme.bodyLarge?.color,
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                       ),
@@ -124,15 +127,15 @@ class ReusableCard extends StatelessWidget {
                         coin.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: theme.textTheme.bodyLarge?.color,
                           fontSize: 13,
                         ),
                       ),
                       Text(
                         formattedPrice,
-                        style: const TextStyle(
-                          color: Colors.white70,
+                        style: TextStyle(
+                          color: theme.textTheme.bodySmall?.color,
                           fontSize: 11,
                         ),
                       ),
@@ -162,17 +165,18 @@ class OnClickReusableCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cardColor = theme.cardTheme.color;
     final isPositive = coin.change >= 0;
 
     return SingleChildScrollView(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Coin Info Header
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF020617),
+              color: cardColor,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Column(
@@ -181,10 +185,10 @@ class OnClickReusableCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text(
                   coin.name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: theme.textTheme.bodyLarge?.color,
                   ),
                 ),
                 Text(
@@ -199,7 +203,6 @@ class OnClickReusableCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          // Small Chart
           SizedBox(
             height: 180,
             child: PriceChart(
@@ -210,26 +213,21 @@ class OnClickReusableCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          // Info Grid
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFF020617),
+              color: cardColor,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
               children: [
-                _buildRow(
-                  'Market Cap',
-                  Formatter.formatLargeNumber(coin.marketCap),
-                ),
-                _buildRow('24h High', Formatter.formatPrice(coin.high24h)),
-                _buildRow('24h Low', Formatter.formatPrice(coin.low24h)),
+                _buildRow(context, 'Market Cap', Formatter.formatLargeNumber(coin.marketCap)),
+                _buildRow(context, '24h High', Formatter.formatPrice(coin.high24h)),
+                _buildRow(context, '24h Low', Formatter.formatPrice(coin.low24h)),
               ],
             ),
           ),
           const SizedBox(height: 16),
-          // Buttons
           Row(
             children: [
               Expanded(
@@ -239,9 +237,12 @@ class OnClickReusableCard extends StatelessWidget {
                     MaterialPageRoute(builder: (_) => ChartScreen(coin: coin)),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white10,
+                    backgroundColor: theme.dividerTheme.color,
                   ),
-                  child: const Text('Details'),
+                  child: Text(
+                    'Details',
+                    style: TextStyle(color: theme.textTheme.bodyLarge?.color),
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
@@ -264,7 +265,8 @@ class OnClickReusableCard extends StatelessWidget {
     );
   }
 
-  Widget _buildRow(String label, String value) {
+  Widget _buildRow(BuildContext context, String label, String value) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -272,12 +274,12 @@ class OnClickReusableCard extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(color: Colors.white54, fontSize: 12),
+            style: TextStyle(color: theme.textTheme.bodySmall?.color, fontSize: 12),
           ),
           Text(
             value,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: theme.textTheme.bodyLarge?.color,
               fontSize: 12,
               fontWeight: FontWeight.bold,
             ),

@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:async';
 import 'package:http/http.dart' as http;
 import '../model/news.dart';
-import '../utils/error_handler.dart';
 import '../utils/retry_helper.dart';
 
 class NewsService {

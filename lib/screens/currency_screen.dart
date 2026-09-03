@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../model/currency.dart';
 import '../services/currency_service.dart';
-import '../utils/formatter.dart';
 
 class CurrencyScreen extends StatefulWidget {
   const CurrencyScreen({super.key});
@@ -38,15 +37,12 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
 
   Future<void> _selectCurrency(Currency currency) async {
     setState(() => _isLoading = true);
-
     try {
       await _currencyService.setCurrency(currency);
       setState(() {
         _selectedCode = currency.code;
         _isLoading = false;
       });
-
-      // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -56,11 +52,7 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
           duration: const Duration(seconds: 2),
         ),
       );
-
-      // Refresh exchange rates
       await _loadExchangeRates();
-
-      // Refresh the app (navigate back)
       Navigator.pop(context, true);
     } catch (e) {
       setState(() => _isLoading = false);
@@ -75,13 +67,14 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cardColor = theme.cardTheme.color;
+    final dividerColor = theme.dividerTheme.color ?? Colors.transparent;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF020617),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Select Currency'),
-        backgroundColor: const Color(0xFF0F172A),
-        foregroundColor: Colors.white,
-        elevation: 0,
         actions: [
           if (_isLoading)
             const Padding(
@@ -103,14 +96,13 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
             )
           : Column(
               children: [
-                // Current selection indicator
                 Container(
                   margin: const EdgeInsets.all(16),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0B1220),
+                    color: cardColor,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withOpacity(0.05)),
+                    border: Border.all(color: dividerColor),
                   ),
                   child: Row(
                     children: [
@@ -131,18 +123,18 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Current Currency',
                               style: TextStyle(
-                                color: Colors.white54,
+                                color: theme.textTheme.bodySmall?.color,
                                 fontSize: 12,
                               ),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               '${_currencyService.selectedCurrency.flag} ${_currencyService.selectedCurrency.name}',
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: theme.textTheme.bodyLarge?.color,
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -162,17 +154,19 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
                   ),
                 ),
 
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
                     'Select your preferred currency for all prices',
-                    style: TextStyle(color: Colors.white54, fontSize: 14),
+                    style: TextStyle(
+                      color: theme.textTheme.bodySmall?.color,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
 
                 const SizedBox(height: 16),
 
-                // Currency list
                 Expanded(
                   child: ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -187,12 +181,12 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
                         decoration: BoxDecoration(
                           color: isSelected
                               ? const Color(0xFF22C55E).withOpacity(0.1)
-                              : const Color(0xFF0B1220),
+                              : cardColor,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: isSelected
                                 ? const Color(0xFF22C55E)
-                                : Colors.white.withOpacity(0.05),
+                                : dividerColor,
                             width: isSelected ? 2 : 1,
                           ),
                         ),
@@ -206,26 +200,26 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
                             style: TextStyle(
                               color: isSelected
                                   ? const Color(0xFF22C55E)
-                                  : Colors.white,
+                                  : theme.textTheme.bodyLarge?.color,
                               fontWeight: isSelected
                                   ? FontWeight.bold
                                   : FontWeight.normal,
                             ),
                           ),
                           subtitle: Text(
-                            '${currency.code.toUpperCase()} ${rate != null ? '• ${rate.toStringAsFixed(2)} USD' : ''}',
+                            '${currency.code.toUpperCase()}${rate != null ? ' • ${rate.toStringAsFixed(2)} USD' : ''}',
                             style: TextStyle(
                               color: isSelected
                                   ? const Color(0xFF22C55E).withOpacity(0.7)
-                                  : Colors.white54,
+                                  : theme.textTheme.bodySmall?.color,
                               fontSize: 12,
                             ),
                           ),
                           trailing: isSelected
                               ? Container(
                                   padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF22C55E),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF22C55E),
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(
@@ -237,7 +231,7 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
                               : Text(
                                   currency.symbol,
                                   style: TextStyle(
-                                    color: Colors.white38,
+                                    color: theme.textTheme.bodySmall?.color,
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -249,26 +243,26 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
                   ),
                 ),
 
-                // Info footer
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    border: Border(
-                      top: BorderSide(color: Colors.white.withOpacity(0.05)),
-                    ),
+                    border: Border(top: BorderSide(color: dividerColor)),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.info_outline,
-                        color: Colors.white38,
+                        color: theme.textTheme.bodySmall?.color,
                         size: 16,
                       ),
                       const SizedBox(width: 8),
                       Text(
                         'Exchange rates provided by CoinGecko',
-                        style: TextStyle(color: Colors.white38, fontSize: 11),
+                        style: TextStyle(
+                          color: theme.textTheme.bodySmall?.color,
+                          fontSize: 11,
+                        ),
                       ),
                     ],
                   ),
